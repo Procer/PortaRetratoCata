@@ -1,0 +1,44 @@
+/* --- Estilos del Visualizador --- */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Evita barras de scroll */
+    background-color: #000; /* Fondo negro por si alguna imagen no carga */
+}
+
+#slideshow-container {
+    width: 100vw; /* Ocupa todo el ancho de la ventana */
+    height: 100vh; /* Ocupa todo el alto de la ventana */
+    position: relative;
+}
+
+.slideshow-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* La imagen cubre todo el espacio sin deformarse */
+    opacity: 0; /* Empieza invisible */
+    transition: opacity 1.5s ease-in-out; /* Duración de la transición "Disolver" */
+}
+
+.slideshow-image.visible {
+    opacity: 1; /* Se hace visible */
+}
+
+#datetime-container {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-family: sans-serif;
+    font-size: 16px;
+    z-index: 100;
+}

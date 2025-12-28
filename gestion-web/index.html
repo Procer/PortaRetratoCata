@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión del Portarretratos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Panel de Control</h1>
+            <p>Gestiona aquí tu portarretratos digital de forma sencilla.</p>
+        </header>
+
+        <main>
+            <!-- Sección de Configuración -->
+            <section class="card">
+                <h2>Configuración</h2>
+                <div class="form-group">
+                    <label for="tiempo_transicion">⏰ Tiempo por Foto (en segundos)</label>
+                    <input type="number" id="tiempo_transicion" min="1" value="10">
+                    <p class="help-text">Indica cuántos segundos durará cada imagen en la pantalla del Portarretratos. (Sugerencia: 10 a 15 segundos).</p>
+                </div>
+                <button id="btn_guardar_config">Guardar Configuración</button>
+            </section>
+
+            <!-- Sección de Carga de Contenido -->
+            <section class="card">
+                <h2>Contenido</h2>
+                <div class="form-group">
+                    <label for="file_input">⬆️ Subir Fotos</label>
+                    <p class="help-text">¡Sencillo! Pulsa el botón, selecciona tus fotos del celular o la computadora, ¡y se enviarán automáticamente al Portarretratos! No necesita hacer nada más.</p>
+                    <input type="file" id="file_input" accept="image/*,video/*" style="display: none;" multiple>
+                    <button id="btn_subir_foto" class="upload-button">Seleccionar y Subir Foto(s)</button>
+                </div>
+            </section>
+
+            <!-- Sección de Google Fotos -->
+            <section class="card">
+                <h2>Google Fotos</h2>
+                <div class="form-group">
+                    <p class="help-text">Conecta tu cuenta de Google para seleccionar un álbum de fotos y mostrarlo en tu portarretratos.</p>
+                    <button id="btn_google_fotos_connect" class="upload-button">Conectar con Google Fotos</button>
+                </div>
+                <div id="google-photos-albums-container">
+                    <!-- Aquí se mostrarán los álbumes de Google Fotos -->
+                </div>
+            </section>
+
+            <!-- Sección de Galería -->
+            <section class="card">
+                <div class="gallery-header">
+                    <h2>Imágenes Subidas</h2>
+                    <div class="gallery-actions">
+                        <button id="btn_refresh_gallery" title="Refrescar galería">♻️</button>
+                        <button id="btn_delete_all_photos" class="delete-button" title="Eliminar Todas las Fotos">🗑️</button>
+                    </div>
+                </div>
+                <div id="photo-list-container">
+                    <p class="help-text">Cargando imágenes...</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Mensaje de Feedback -->
+        <div id="feedback-message" class="feedback"></div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

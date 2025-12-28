@@ -1,0 +1,261 @@
+
+/* --- Variables de Diseño --- */
+:root {
+    --color-primario: #007bff;
+    --color-primario-hover: #0056b3;
+    --color-fondo: #f4f6f9;
+    --color-tarjeta: #ffffff;
+    --color-texto: #333;
+    --color-texto-secundario: #6c757d;
+    --color-exito: #28a745;
+    --color-error: #dc3545;
+    --sombra-tarjeta: 0 2px 5px rgba(0, 0, 0, 0.05);
+    --radio-borde: 8px;
+}
+
+/* --- Estilos Generales --- */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+header p {
+    font-size: 1.1rem;
+    color: var(--color-texto-secundario);
+}
+
+/* --- Tarjetas --- */
+.card {
+    background-color: var(--color-tarjeta);
+    border-radius: var(--radio-borde);
+    box-shadow: var(--sombra-tarjeta);
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.card h2 {
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* --- Formularios y Botones --- */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: var(--radio-borde);
+    font-size: 1rem;
+    box-sizing: border-box; /* Asegura que el padding no afecte el ancho total */
+}
+
+.help-text {
+    font-size: 0.9rem;
+    color: var(--color-texto-secundario);
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+
+button {
+    background-color: var(--color-primario);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: var(--radio-borde);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+button:hover {
+    background-color: var(--color-primario-hover);
+}
+
+button.upload-button {
+    display: inline-block;
+    width: auto;
+}
+
+/* --- Galería --- */
+.gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gallery-actions {
+    display: flex;
+    gap: 10px; /* Espacio entre los botones */
+    align-items: center;
+}
+
+#btn_refresh_gallery {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px;
+    color: var(--color-texto-secundario);
+}
+
+#photo-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.photo-item {
+    position: relative;
+    border-radius: var(--radio-borde);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    aspect-ratio: 1 / 1; /* Mantiene las imágenes cuadradas */
+}
+
+.photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.photo-item .delete-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    line-height: 24px;
+    text-align: center;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.photo-item:hover .delete-btn {
+    opacity: 1;
+}
+
+.photo-item.is-video {
+    position: relative;
+}
+
+.photo-item .video-indicator {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+}
+
+
+/* --- Mensaje de Feedback --- */
+.feedback {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 25px;
+    border-radius: var(--radio-borde);
+    color: white;
+    font-weight: 600;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 1000;
+}
+
+.feedback.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.feedback.success {
+    background-color: var(--color-exito);
+}
+
+.feedback.error {
+    background-color: var(--color-error);
+}
+
+/* --- Responsividad --- */
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+    .container {
+        padding: 0 10px;
+    }
+    header h1 {
+        font-size: 2rem;
+    }
+    .card {
+        padding: 20px;
+    }
+    #photo-list-container {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+    }
+}
+
+.delete-button {
+    background: none; /* Fondo transparente */
+    border: none; /* Sin borde */
+    color: var(--color-texto-secundario); /* Color del icono */
+    font-size: 1.5rem; /* Tamaño del icono, similar al de refrescar */
+    cursor: pointer;
+    padding: 5px; /* Padding similar al de refrescar */
+}
+
+.delete-button:hover {
+    background-color: rgba(0, 0, 0, 0.1); /* Un hover sutil */
+    color: var(--color-error); /* Color rojo al hacer hover */
+}
+
+/* Estilos específicos para el botón de eliminar todas las fotos */
+#btn_delete_all_photos {
+    /* Los estilos de .delete-button ya son suficientes */
+}
