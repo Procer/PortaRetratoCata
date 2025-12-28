@@ -1,6 +1,6 @@
 // --- Configuración Esencial ---
 const API_TOKEN = 'TOKEN_SEGURO_12345';
-const API_BASE_URL = 'http://localhost/PortaRetrato/backend-php';
+const API_BASE_URL = '../backend-php';
 
 // Función para barajar un array (algoritmo de Fisher-Yates)
 function shuffleArray(array) {

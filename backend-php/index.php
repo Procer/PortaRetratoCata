@@ -17,16 +17,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 $request_uri = $_SERVER['REQUEST_URI'];
 $request_method = $_SERVER['REQUEST_METHOD'];
 
-// Simplificar la ruta, eliminando el prefijo de la carpeta si es necesario
-$base_path = '/PortaRetrato/backend-php';
-if (strpos($request_uri, $base_path) === 0) {
-    $request_uri = substr($request_uri, strlen($base_path));
-}
+// --- Lógica de Ruteo Dinámica ---
+// Determina la ruta base de forma dinámica para que funcione en cualquier entorno.
+$script_name = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+$base_path = ($script_name == '/') ? '' : $script_name;
+
+$route = substr(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), strlen($base_path));
+// --- Fin de Lógica de Ruteo Dinámica ---
 
 $marco_id = verificar_token($conn); // Autenticación para todas las rutas
 
 // Normalizar la ruta para el switch (quita query strings y la barra final)
-$route = parse_url($request_uri, PHP_URL_PATH);
 $route = rtrim($route, '/');
 $route = $route ?: '/'; // Si la ruta queda vacía (era solo '/'), la restauramos
 
