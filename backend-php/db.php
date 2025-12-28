@@ -2,10 +2,26 @@
 // --- Conexión a la Base de Datos ---
 // Ajusta estos valores según tu configuración de MySQL
 
-$db_host = 'localhost';
-$db_user = 'zaratesy_portaretrato';
-$db_pass = 'Catunga0112.'; // o tu contraseña
-$db_name = 'zaratesy_portaretrato'; // Asegúrate de crear esta base de datos
+// --- Configuración de Base de Datos Dinámica ---
+// Detecta el entorno (local o producción) para usar las credenciales correctas.
+$is_local = (
+    isset($_SERVER['HTTP_HOST']) &&
+    ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], 'localhost:') === 0 || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') === 0)
+);
+
+if ($is_local) {
+    // Configuración para el entorno LOCAL
+    $db_host = 'localhost';
+    $db_user = 'root';
+    $db_pass = 'Catunga0112.'; // o tu contraseña local
+    $db_name = 'portaretrato_db';
+} else {
+    // Configuración para el entorno de PRODUCCIÓN (Hosting)
+    $db_host = 'localhost';
+    $db_user = 'zaratesy_portaretrato';
+    $db_pass = 'Catunga0112.';
+    $db_name = 'zaratesy_portaretrato';
+}
 
 $conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
 
