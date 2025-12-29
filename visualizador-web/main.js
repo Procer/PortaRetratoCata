@@ -43,7 +43,7 @@ function showNextMedia() {
     // Crear el elemento y configurar el próximo avance
     if (item.media_type === 'video') {
         element = document.createElement('video');
-        element.src = item.url;
+        element.src = `${API_BASE_URL}/${item.url}`;
         element.autoplay = true;
         element.muted = true;
         element.playsInline = true;
@@ -55,7 +55,7 @@ function showNextMedia() {
 
     } else { // Es una imagen
         element = document.createElement('img');
-        element.src = item.url;
+        element.src = `${API_BASE_URL}/${item.url}`;
 
         // Después del tiempo configurado, mostrar el siguiente medio
         imageTimerId = setTimeout(showNextMedia, transitionTime * 1000);
