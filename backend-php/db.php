@@ -95,11 +95,7 @@ function verificar_token($conn) {
     $result = $stmt->get_result();
     
     if ($result->num_rows === 0) {
-        json_response([
-            'error' => 'Token inválido.', 
-            'debug_info' => 'El token proporcionado no fue encontrado en la base de datos.',
-            'token_used' => $token, // Muestra el token exacto que se usó
-        ], 401);
+        json_response(['error' => 'Token inválido.'], 401);
     }
 
     $marco = $result->fetch_assoc();
