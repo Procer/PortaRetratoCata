@@ -43,18 +43,22 @@ function verificar_token($conn) {
 
     // Método 1: Leer desde el encabezado de Autorización (preferido)
     if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-        $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
-        if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+        if (preg_match('/Bearer\s(\S+)/', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
             $token = $matches[1];
         }
     }
 
-    // Método 2: Intentar obtener el token de query parameters (GET)
+    // Método 2: Fallback a un encabezado personalizado si el estándar es bloqueado por el servidor
+    if (empty($token) && isset($_SERVER['HTTP_X_API_TOKEN'])) {
+        $token = $_SERVER['HTTP_X_API_TOKEN'];
+    }
+
+    // Método 3: Intentar obtener el token de query parameters (GET)
     if (empty($token) && isset($_GET['api_token'])) {
         $token = $_GET['api_token'];
     }
 
-    // Método 3: Intentar obtener el token del cuerpo de la solicitud (POST/PUT JSON)
+    // Método 4: Intentar obtener el token del cuerpo de la solicitud (POST/PUT JSON)
     if (empty($token) && $_SERVER['REQUEST_METHOD'] !== 'GET') {
         $input = json_decode(file_get_contents('php://input'), true);
         if (isset($input['api_token'])) {
@@ -62,7 +66,7 @@ function verificar_token($conn) {
         }
     }
     
-    // Método 4: Intentar obtener el token de POST data (para FormData)
+    // Método 5: Intentar obtener el token de POST data (para FormData)
     if (empty($token) && isset($_POST['api_token'])) {
         $token = $_POST['api_token'];
     }

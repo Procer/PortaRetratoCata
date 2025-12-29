@@ -105,7 +105,7 @@ function updateDateTime() {
     async function syncWithBackend() {
         console.log('Sincronizando con el backend...');
         try {
-            const fetchOptions = { method: 'GET', headers: { 'Authorization': `Bearer ${API_TOKEN}` } };
+            const fetchOptions = { method: 'GET', headers: { 'X-Api-Token': API_TOKEN } };
 
             const configResponse = await fetch(`${API_BASE_URL}/config`, fetchOptions);
             if (configResponse.ok) {

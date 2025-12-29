@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchPhotos = () => {
         photoListContainer.innerHTML = '<p class="help-text">Cargando imágenes...</p>';
-        fetch(`${API_BASE_URL}/photos`, { headers: { 'Authorization': `Bearer ${API_TOKEN}` } })
+        fetch(`${API_BASE_URL}/photos`, { headers: { 'X-Api-Token': API_TOKEN } })
             .then(response => response.ok ? response.json() : Promise.reject('No se pudo obtener la lista de fotos.'))
             .then(renderPhotos)
             .catch(error => {
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deletePhoto = (photoId) => {
         fetch(`${API_BASE_URL}/photos/delete`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_TOKEN}` },
+            headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
             body: JSON.stringify({ photo_id: photoId })
         })
         .then(response => response.json())
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Cargar configuración inicial ---
     const fetchConfig = () => {
-        fetch(`${API_BASE_URL}/config`, { headers: { 'Authorization': `Bearer ${API_TOKEN}` } })
+        fetch(`${API_BASE_URL}/config`, { headers: { 'X-Api-Token': API_TOKEN } })
             .then(response => response.json())
             .then(data => { if (data.tiempo_transicion_seg) tiempoInput.value = data.tiempo_transicion_seg; })
             .catch(error => console.error('Error al cargar la configuración:', error));
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         fetch(`${API_BASE_URL}/config`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_TOKEN}` },
+            headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
             body: JSON.stringify({ tiempo_transicion_seg: tiempo })
         })
         .then(response => response.json())
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/photos`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${API_TOKEN}` },
+                    headers: { 'X-Api-Token': API_TOKEN },
                     body: formData
                 });
                 
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirm('¿Estás seguro de que quieres eliminar TODAS las fotos y vídeos subidos permanentemente? Esta acción no se puede deshacer.')) {
             fetch(`${API_BASE_URL}/photos/delete_all`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_TOKEN}` },
+                headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
                 body: JSON.stringify({})
             })
             .then(response => response.json())
