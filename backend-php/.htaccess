@@ -6,7 +6,7 @@
     RewriteCond %{REQUEST_FILENAME} !-d
 
     # De lo contrario, redirige la petición a index.php
-    RewriteRule . index.php [L]
+    RewriteRule . index.php [L,QSA]
 </IfModule>
 
 # Pasar el header de autorización a PHP usando SetEnvIf
