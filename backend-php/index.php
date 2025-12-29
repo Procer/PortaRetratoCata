@@ -78,16 +78,14 @@ switch ($route) {
                     mkdir($upload_dir, 0777, true);
                 }
 
-                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-                $host = $_SERVER['HTTP_HOST'];
-
                 // Iterar sobre cada archivo subido
                 for ($i = 0; $i < count($files['name']); $i++) {
                     $file_name = uniqid() . '-' . basename($files['name'][$i]);
                     $target_path = $upload_dir . $file_name;
 
                     if (move_uploaded_file($files['tmp_name'][$i], $target_path)) {
-                        $public_url = $protocol . $host . $base_path . '/' . $target_path;
+                        // Se almacena una URL relativa ($target_path) para que sea portable.
+                        $public_url = $target_path;
                         
                         // Determinar el tipo de medio (image o video)
                         $mime_type = $files['type'][$i];

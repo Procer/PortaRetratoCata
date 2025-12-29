@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Configuración Esencial ---
     const API_TOKEN = 'TOKEN_SEGURO_12345';
-    const API_BASE_URL = '/PortaRetrato/backend-php';
+    const API_BASE_URL = '../backend-php';
 
     // --- Elementos del DOM ---
     const tiempoInput = document.getElementById('tiempo_transicion');
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 div.appendChild(indicator);
                 
                 // Generar y mostrar la miniatura del vídeo
-                generateVideoThumbnail(item.url)
+                generateVideoThumbnail(`${API_BASE_URL}/${item.url}`)
                     .then(thumbnailUrl => {
                         const img = document.createElement('img');
                         img.src = thumbnailUrl;
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 const img = document.createElement('img');
-                img.src = item.url;
+                img.src = `${API_BASE_URL}/${item.url}`;
                 img.alt = 'Miniatura';
                 img.loading = 'lazy';
                 div.insertBefore(img, div.firstChild);
