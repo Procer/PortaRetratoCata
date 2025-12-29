@@ -1,4 +1,42 @@
+// --- TEMPORARY DEBUG FUNCTION ---
+const runAuthDebug = () => {
+    const DEBUG_TOKEN = 'TOKEN_SEGURO_12345';
+    const url = '../backend-php/debug_auth.php?api_token=' + DEBUG_TOKEN;
+
+    console.log('--- RUNNING AUTH DEBUG ---');
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + DEBUG_TOKEN,
+            'X-Api-Token': DEBUG_TOKEN
+        },
+        body: JSON.stringify({
+            api_token: DEBUG_TOKEN,
+            message: 'Debug request from script.js'
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('--- AUTH DEBUG RESPONSE ---');
+        console.log('El servidor recibió lo siguiente:');
+        console.log(JSON.stringify(data, null, 2));
+        alert('Prueba de diagnóstico finalizada. Revisa la consola del desarrollador (F12) para ver los resultados.');
+    })
+    .catch(err => {
+        console.error('--- AUTH DEBUG FAILED ---', err);
+        alert('La prueba de diagnóstico falló. Revisa la consola del desarrollador (F12).');
+    });
+};
+// --- END TEMPORARY DEBUG FUNCTION ---
+
 document.addEventListener('DOMContentLoaded', () => {
+    runAuthDebug(); // Run the debug function on page load
 
     // --- Configuración Esencial ---
     const API_TOKEN = 'TOKEN_SEGURO_12345';
