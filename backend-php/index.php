@@ -134,6 +134,11 @@ switch ($route) {
 
             if ($result) {
                 $url = $result['url'];
+
+                // Definir las variables que faltaban para construir la ruta
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+                $host = $_SERVER['HTTP_HOST'];
+                
                 // Convertir la URL pública a una ruta de archivo local
                 $file_path = str_replace($protocol . $host . $base_path . '/', '', $url);
 
