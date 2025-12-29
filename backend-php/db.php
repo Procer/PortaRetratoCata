@@ -74,14 +74,32 @@ function verificar_token($conn) {
     if (empty($token)) {
         json_response(['error' => 'Token no proporcionado o en formato incorrecto.'], 401);
     }
+    
+    // --- Enhanced Debugging ---
+    if ($conn->connect_error) {
+        json_response(['error' => 'La conexión a la BD falló justo antes de la verificación del token.', 'details' => $conn->connect_error], 500);
+    }
+    
+    // Usa TRIM() para evitar problemas con espacios en blanco accidentales en la BD
+    $stmt = $conn->prepare("SELECT id FROM marcos WHERE TRIM(token_acceso) = ?");
+    if (!$stmt) {
+        json_response(['error' => 'Falló la preparación de la consulta.', 'details' => $conn->error], 500);
+    }
 
-    $stmt = $conn->prepare("SELECT id FROM marcos WHERE token_acceso = ?");
     $stmt->bind_param("s", $token);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    
+    if (!$stmt->execute()) {
+        json_response(['error' => 'Falló la ejecución de la consulta.', 'details' => $stmt->error], 500);
+    }
 
+    $result = $stmt->get_result();
+    
     if ($result->num_rows === 0) {
-        json_response(['error' => 'Token inválido.'], 401);
+        json_response([
+            'error' => 'Token inválido.', 
+            'debug_info' => 'El token proporcionado no fue encontrado en la base de datos.',
+            'token_used' => $token, // Muestra el token exacto que se usó
+        ], 401);
     }
 
     $marco = $result->fetch_assoc();
