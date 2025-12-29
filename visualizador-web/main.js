@@ -102,20 +102,19 @@ function updateDateTime() {
 }
 
 // --- Lógica de Sincronización con el Backend ---
-async function syncWithBackend() {
-    console.log('Sincronizando con el backend...');
-    try {
-        const fetchOptions = { method: 'GET', headers: { 'Authorization': `Bearer ${API_TOKEN}` } };
+    async function syncWithBackend() {
+        console.log('Sincronizando con el backend...');
+        try {
+            const fetchOptions = { method: 'GET', headers: { 'Authorization': `Bearer ${API_TOKEN}` } };
 
-        const configResponse = await fetch(`${API_BASE_URL}/config?api_token=${API_TOKEN}`);
-        if (configResponse.ok) {
-            const config = await configResponse.json();
-            transitionTime = config.tiempo_transicion_seg || 10;
-        }
+            const configResponse = await fetch(`${API_BASE_URL}/config`, fetchOptions);
+            if (configResponse.ok) {
+                const config = await configResponse.json();
+                transitionTime = config.tiempo_transicion_seg || 10;
+            }
 
-        const mediaResponse = await fetch(`${API_BASE_URL}/photos?api_token=${API_TOKEN}`);
-        if (mediaResponse.ok) {
-            const newItems = await mediaResponse.json();
+            const mediaResponse = await fetch(`${API_BASE_URL}/photos`, fetchOptions);
+            if (mediaResponse.ok) {            const newItems = await mediaResponse.json();
             if (JSON.stringify(mediaItems) !== JSON.stringify(newItems)) {
                 console.log(`Lista de medios actualizada: ${newItems.length} elementos.`);
                 mediaItems = newItems;

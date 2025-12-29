@@ -41,19 +41,28 @@ function json_response($data, $status_code = 200) {
 function verificar_token($conn) {
     $token = '';
 
-    // Intentar obtener el token de query parameters (GET)
-    if (isset($_GET['api_token'])) {
+    // Método 1: Leer desde el encabezado de Autorización (preferido)
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+            $token = $matches[1];
+        }
+    }
+
+    // Método 2: Intentar obtener el token de query parameters (GET)
+    if (empty($token) && isset($_GET['api_token'])) {
         $token = $_GET['api_token'];
     }
-    // Intentar obtener el token del cuerpo de la solicitud (POST/PUT JSON)
-    // Solo si no se encontró en GET y el método no es GET
+
+    // Método 3: Intentar obtener el token del cuerpo de la solicitud (POST/PUT JSON)
     if (empty($token) && $_SERVER['REQUEST_METHOD'] !== 'GET') {
         $input = json_decode(file_get_contents('php://input'), true);
         if (isset($input['api_token'])) {
             $token = $input['api_token'];
         }
     }
-    // Intentar obtener el token de POST data (para FormData)
+    
+    // Método 4: Intentar obtener el token de POST data (para FormData)
     if (empty($token) && isset($_POST['api_token'])) {
         $token = $_POST['api_token'];
     }
