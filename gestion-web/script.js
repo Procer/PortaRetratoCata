@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const photoListContainer = document.getElementById('photo-list-container');
     const btnRefreshGallery = document.getElementById('btn_refresh_gallery');
     const btnGoogleFotosConnect = document.getElementById('btn_google_fotos_connect');
+    const dropZone = document.getElementById('drop-zone');
 
     // --- Función para mostrar mensajes de feedback ---
     const showFeedback = (message, isError = false) => {
@@ -21,7 +22,62 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { feedbackMessage.classList.remove('show'); }, 3000);
     };
 
-    // --- Lógica de la Galería ---
+    // --- Lógica de subida de archivos ---
+    const uploadFiles = async (files) => {
+        if (!files || files.length === 0) return;
+
+        const originalButtonText = btnSubirFoto.textContent;
+        btnSubirFoto.disabled = true;
+
+        const BATCH_SIZE = 10;
+        let totalUploaded = 0;
+        const validFiles = Array.from(files).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
+        
+        if (validFiles.length !== files.length) {
+            showFeedback('Algunos archivos no eran imágenes o videos y fueron ignorados.', true);
+        }
+
+        if (validFiles.length === 0) {
+            showFeedback('No se seleccionaron archivos de imagen o video válidos.', true);
+            btnSubirFoto.disabled = false;
+            return;
+        }
+
+        for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
+            const batch = validFiles.slice(i, i + BATCH_SIZE);
+            const batchNumber = (i / BATCH_SIZE) + 1;
+            const totalBatches = Math.ceil(validFiles.length / BATCH_SIZE);
+
+            btnSubirFoto.textContent = `Subiendo lote ${batchNumber} de ${totalBatches}...`;
+            
+            const formData = new FormData();
+            batch.forEach(file => formData.append('photos[]', file));
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/photos`, {
+                    method: 'POST',
+                    headers: { 'X-Api-Token': API_TOKEN },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error || `Error en el lote ${batchNumber}`);
+                
+                totalUploaded += data.uploaded_count || batch.length;
+                showFeedback(`Lote ${batchNumber} subido. Total: ${totalUploaded} / ${validFiles.length}`);
+            } catch (error) {
+                showFeedback(`Error al subir el lote ${batchNumber}: ${error.message}`, true);
+                break;
+            }
+        }
+
+        showFeedback(`¡Proceso de subida completado! Total subidos: ${totalUploaded}`, false);
+        fetchPhotos();
+
+        btnSubirFoto.textContent = originalButtonText;
+        btnSubirFoto.disabled = false;
+        fileInput.value = ''; // Limpia el input para poder subir los mismos archivos de nuevo
+    };
 
     /**
      * Genera una miniatura de un vídeo capturando un fotograma.
@@ -150,55 +206,24 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = API_BASE_URL + '/admin.php';
     });
 
-    fileInput.addEventListener('change', async () => {
-        const files = Array.from(fileInput.files);
-        if (files.length === 0) return;
+    fileInput.addEventListener('change', () => {
+        uploadFiles(fileInput.files);
+    });
 
-        const originalButtonText = btnSubirFoto.textContent;
-        btnSubirFoto.disabled = true;
+    // --- Lógica de Arrastrar y Soltar ---
+    dropZone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
 
-        const BATCH_SIZE = 10; // Subir en lotes de 10
-        let totalUploaded = 0;
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
 
-        for (let i = 0; i < files.length; i += BATCH_SIZE) {
-            const batch = files.slice(i, i + BATCH_SIZE);
-            const batchNumber = (i / BATCH_SIZE) + 1;
-            const totalBatches = Math.ceil(files.length / BATCH_SIZE);
-
-            btnSubirFoto.textContent = `Subiendo lote ${batchNumber} de ${totalBatches}...`;
-            
-            const formData = new FormData();
-            batch.forEach(file => formData.append('photos[]', file));
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/photos`, {
-                    method: 'POST',
-                    headers: { 'X-Api-Token': API_TOKEN },
-                    body: formData
-                });
-                
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || `Error en el lote ${batchNumber}`);
-                }
-                
-                totalUploaded += data.uploaded_count || batch.length;
-                showFeedback(`Lote ${batchNumber} subido. Total: ${totalUploaded} / ${files.length}`);
-
-            } catch (error) {
-                showFeedback(`Error al subir el lote ${batchNumber}: ${error.message}`, true);
-                // Detener la subida si un lote falla
-                break; 
-            }
-        }
-
-        showFeedback(`¡Proceso de subida completado! Total subidos: ${totalUploaded}`, false);
-        fetchPhotos(); // Refrescar la galería al final
-
-        btnSubirFoto.textContent = originalButtonText;
-        btnSubirFoto.disabled = false;
-        fileInput.value = '';
+    dropZone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        dropZone.classList.remove('drag-over');
+        uploadFiles(event.dataTransfer.files);
     });
 
     btnRefreshGallery.addEventListener('click', fetchPhotos);

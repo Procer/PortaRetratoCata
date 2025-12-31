@@ -259,3 +259,31 @@ button.upload-button {
 #btn_delete_all_photos {
     /* Los estilos de .delete-button ya son suficientes */
 }
+
+/* --- Drop Zone --- */
+.drop-zone {
+    border: 2px dashed #ccc;
+    border-radius: var(--radio-borde);
+    padding: 30px;
+    text-align: center;
+    color: var(--color-texto-secundario);
+    margin-top: 20px;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.drop-zone p {
+    margin: 0;
+    font-size: 1rem;
+    pointer-events: none; /* Evita que el parrafo intercepte eventos de drag */
+}
+
+.drop-zone.drag-over {
+    background-color: #e9f5ff;
+    border-color: var(--color-primario);
+    color: var(--color-primario);
+}
+
+/* --- Ocultar Sección de Google Fotos --- */
+#google-photos-section {
+    display: none !important;
+}

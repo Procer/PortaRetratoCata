@@ -31,14 +31,17 @@
                 <h2>Contenido</h2>
                 <div class="form-group">
                     <label for="file_input">⬆️ Subir Fotos</label>
-                    <p class="help-text">¡Sencillo! Pulsa el botón, selecciona tus fotos del celular o la computadora, ¡y se enviarán automáticamente al Portarretratos! No necesita hacer nada más.</p>
+                    <p class="help-text">Haz clic en el botón para seleccionar tus archivos, o arrástralos y suéltalos en el área de abajo.</p>
                     <input type="file" id="file_input" accept="image/*,video/*" style="display: none;" multiple>
                     <button id="btn_subir_foto" class="upload-button">Seleccionar y Subir Foto(s)</button>
+                    <div id="drop-zone" class="drop-zone">
+                        <p>Arrastra y suelta los archivos aquí</p>
+                    </div>
                 </div>
             </section>
 
             <!-- Sección de Google Fotos -->
-            <section class="card">
+            <section class="card" id="google-photos-section">
                 <h2>Google Fotos</h2>
                 <div class="form-group">
                     <p class="help-text">Conecta tu cuenta de Google para seleccionar un álbum de fotos y mostrarlo en tu portarretratos.</p>
