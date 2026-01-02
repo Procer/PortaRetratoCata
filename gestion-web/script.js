@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalButtonText = btnSubirFoto.textContent;
         btnSubirFoto.disabled = true;
 
-        const BATCH_SIZE = 10;
+        const BATCH_SIZE = 50;
         let totalUploaded = 0;
         const validFiles = Array.from(files).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
         
