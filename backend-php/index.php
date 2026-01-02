@@ -3,6 +3,12 @@
 
 require_once 'db.php';
 
+// Aumentar los límites de subida para permitir vídeos y subidas en lote más grandes.
+// Estos valores pueden estar limitados por la configuración del servidor (php.ini).
+@ini_set('upload_max_filesize', '100M');
+@ini_set('post_max_size', '110M'); // Un poco más grande que upload_max_filesize
+@ini_set('max_file_uploads', '50');    // Coincidir con el BATCH_SIZE del frontend
+
 // --- CORS y Headers ---
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS");
@@ -148,10 +154,13 @@ switch ($route) {
                 
                 if ($delete_stmt->execute()) {
                     // 3. Si el borrado de la DB fue exitoso, borrar el archivo físico
+                    $warning = null;
                     if (file_exists($file_path)) {
-                        unlink($file_path);
+                        if (!@unlink($file_path)) {
+                             $warning = "El registro se eliminó de la DB, pero no se pudo borrar el archivo físico ({$file_path}). Verifique los permisos.";
+                        }
                     }
-                    json_response(['success' => true]);
+                    json_response(['success' => true, 'warning' => $warning]);
                 } else {
                     json_response(['error' => 'Error al eliminar la foto de la base de datos.'], 500);
                 }
@@ -182,17 +191,20 @@ switch ($route) {
                 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
                 $host = $_SERVER['HTTP_HOST'];
                 $deleted_count = 0;
+                $errors = [];
 
                 foreach ($files_to_delete as $url) {
                     // Convertir la URL pública a una ruta de archivo local
                     $file_path = str_replace($protocol . $host . $base_path . '/', '', $url);
                     if (file_exists($file_path)) {
-                        if (unlink($file_path)) {
+                        if (@unlink($file_path)) {
                             $deleted_count++;
+                        } else {
+                            $errors[] = "No se pudo borrar '{$file_path}'. Verifique los permisos.";
                         }
                     }
                 }
-                json_response(['success' => true, 'deleted_files_count' => $deleted_count]);
+                json_response(['success' => true, 'deleted_files_count' => $deleted_count, 'errors' => $errors]);
             } else {
                 json_response(['error' => 'Error al eliminar las fotos de la base de datos.'], 500);
             }
