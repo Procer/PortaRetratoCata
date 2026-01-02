@@ -153,16 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         photoListContainer.innerHTML = '<p class="help-text">Cargando imágenes...</p>';
         fetch(`${API_BASE_URL}/photos`, { headers: { 'X-Api-Token': API_TOKEN } })
             .then(response => response.ok ? response.json() : Promise.reject('No se pudo obtener la lista de fotos.'))
-            .then(data => {
-                // --- Diagnóstico Temporal ---
-                if (data.debug_limits) {
-                    console.log('--- LÍMITES DE SUBIDA DEL SERVIDOR ---');
-                    console.log('upload_max_filesize:', data.debug_limits.upload_max_filesize);
-                    console.log('post_max_size:', data.debug_limits.post_max_size);
-                    console.log('------------------------------------');
-                }
-                renderPhotos(data.fotos || data);
-            })
+            .then(renderPhotos)
             .catch(error => {
                 photoListContainer.innerHTML = `<p class="help-text" style="color: var(--color-error);">${error}</p>`;
             });

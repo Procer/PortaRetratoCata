@@ -64,10 +64,6 @@ switch ($route) {
     // --- Endpoint de Fotos ---
     case '/photos':
         if ($request_method == 'GET') {
-            // --- Diagnóstico Temporal ---
-            $upload_max_filesize = ini_get('upload_max_filesize');
-            $post_max_size = ini_get('post_max_size');
-            
             $stmt = $conn->prepare("SELECT id, url, media_type FROM fotos WHERE marco_id = ? ORDER BY created_at DESC");
             $stmt->bind_param("i", $marco_id);
             $stmt->execute();
@@ -76,16 +72,7 @@ switch ($route) {
             while ($row = $result->fetch_assoc()) {
                 $fotos[] = $row;
             }
-
-            // Añadir los límites a la respuesta para depuración
-            $response = [
-                'fotos' => $fotos,
-                'debug_limits' => [
-                    'upload_max_filesize' => $upload_max_filesize,
-                    'post_max_size' => $post_max_size,
-                ]
-            ];
-            json_response($response);
+            json_response($fotos);
         } elseif ($request_method == 'POST') {
             if (isset($_FILES['photos'])) {
                 $files = $_FILES['photos'];
