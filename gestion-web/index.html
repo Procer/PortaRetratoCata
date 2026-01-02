@@ -56,10 +56,12 @@
             <section class="card">
                 <div class="gallery-header">
                     <h2>Imágenes Subidas</h2>
-                    <div class="gallery-actions">
-                        <button id="btn_refresh_gallery" title="Refrescar galería">♻️</button>
-                        <button id="btn_delete_all_photos" class="delete-button" title="Eliminar Todas las Fotos">🗑️</button>
-                    </div>
+                    <button id="btn_refresh_gallery" class="btn-secondary" title="Refrescar la galería de imágenes y vídeos">Refrescar Galería</button>
+                    <button id="btn_import_server" class="btn-secondary" title="Busca y procesa archivos subidos manualmente a la carpeta 'importar' en el servidor">Importar desde Servidor</button>
+                </div>
+                <div class="gallery-controls-group">
+                    <button id="btn_delete_all_photos" class="btn-danger">Eliminar Todo</button>
+                </div>
                 </div>
                 <div id="photo-list-container">
                     <p class="help-text">Cargando imágenes...</p>

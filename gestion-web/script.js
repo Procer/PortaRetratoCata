@@ -228,6 +228,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnRefreshGallery.addEventListener('click', fetchPhotos);
 
+    const btnImportServer = document.getElementById('btn_import_server');
+    btnImportServer.addEventListener('click', () => {
+        const originalButtonText = btnImportServer.textContent;
+        btnImportServer.textContent = 'Importando...';
+        btnImportServer.disabled = true;
+
+        showFeedback('Iniciando proceso de importación en el servidor...', false);
+
+        fetch(`${API_BASE_URL}/scan.php`, {
+            method: 'POST', // Usamos POST para que se ejecute la lógica
+            headers: { 'X-Api-Token': API_TOKEN }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.error || 'Ocurrió un error desconocido durante la importación.');
+            }
+            
+            let message = data.message;
+            if (data.imported_count > 0) {
+                message = `¡Se importaron ${data.imported_count} nuevos archivos!`;
+                fetchPhotos(); // Refrescar la galería para ver los nuevos archivos
+            } else {
+                message = 'No se encontraron nuevos archivos para importar.';
+            }
+
+            if(data.errors && data.errors.length > 0){
+                console.error("Errores durante la importación:", data.errors);
+                message += ` Se encontraron ${data.errors.length} errores. Revisa la consola para más detalles.`;
+                showFeedback(message, true);
+            } else {
+                showFeedback(message, false);
+            }
+        })
+        .catch(error => {
+            showFeedback(`Error crítico: ${error.message}`, true);
+        })
+        .finally(() => {
+            btnImportServer.textContent = originalButtonText;
+            btnImportServer.disabled = false;
+        });
+    });
+
     const btnDeleteAllPhotos = document.getElementById('btn_delete_all_photos');
 
     btnDeleteAllPhotos.addEventListener('click', () => {
