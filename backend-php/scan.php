@@ -18,10 +18,32 @@ try {
 }
 
 
+// --- DEBUGGING BLOCK ---
+$import_dir = __DIR__ . '/importar/';
+$debug_info = [
+    'resolved_import_dir' => realpath($import_dir),
+    'import_dir_exists' => is_dir($import_dir),
+    'import_dir_is_readable' => is_readable($import_dir),
+    'open_basedir' => ini_get('open_basedir'),
+    'scandir_result' => @scandir($import_dir)
+];
+
+// Si el directorio no es legible, termina el script y muestra la información de depuración.
+if (!$debug_info['import_dir_is_readable']) {
+    json_response([
+        'success' => false,
+        'error' => 'El script no tiene permisos para leer el directorio de importación.',
+        'debug_info' => $debug_info
+    ], 500);
+    exit;
+}
+// --- END DEBUGGING BLOCK ---
+
+
 // --- Lógica Principal de Importación ---
 
-$import_dir = __DIR__ . '/importar/';
 $target_dir = __DIR__ . '/public/contents/frame_' . $marco_id . '/';
+
 
 $imported_files = [];
 $errors = [];

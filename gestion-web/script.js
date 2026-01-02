@@ -240,9 +240,19 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST', // Usamos POST para que se ejecute la lógica
             headers: { 'X-Api-Token': API_TOKEN }
         })
-        .then(response => response.json())
+        .then(response => {
+            // Si la respuesta no es OK (ej. un error 500), la procesamos como un error.
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    // Rechazamos la promesa para que caiga en el .catch, pasando los datos del error.
+                    return Promise.reject(errorData);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (!data.success) {
+                // Esto manejaría errores lógicos donde la respuesta es 200 OK pero success=false
                 throw new Error(data.error || 'Ocurrió un error desconocido durante la importación.');
             }
             
@@ -262,8 +272,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 showFeedback(message, false);
             }
         })
-        .catch(error => {
-            showFeedback(`Error crítico: ${error.message}`, true);
+        .catch(errorData => {
+            // errorData ahora es el objeto JSON que enviamos desde el backend
+            console.error("Error detallado del servidor:", errorData);
+            const errorMessage = errorData.error || 'Error crítico. Revisa la consola.';
+            showFeedback(errorMessage, true);
         })
         .finally(() => {
             btnImportServer.textContent = originalButtonText;
