@@ -41,18 +41,42 @@ switch ($route) {
     // --- Endpoint de Configuración ---
     case '/config':
         if ($request_method == 'GET') {
-            $stmt = $conn->prepare("SELECT tiempo_transicion_seg, efecto_transicion FROM configuracion_marcos WHERE marco_id = ?");
+            $stmt = $conn->prepare("SELECT tiempo_transicion_seg, efecto_transicion, font_size_px, weather_city, weather_api_key, weather_font_size_px FROM configuracion_marcos WHERE marco_id = ?");
             $stmt->bind_param("i", $marco_id);
             $stmt->execute();
             $result = $stmt->get_result()->fetch_assoc();
-            json_response($result ? $result : ['tiempo_transicion_seg' => 10, 'efecto_transicion' => 'Disolver']);
+            // Proporcionar valores por defecto para todos los campos si no existen
+            $defaults = [
+                'tiempo_transicion_seg' => 10,
+                'efecto_transicion' => 'Disolver',
+                'font_size_px' => 16,
+                'weather_city' => '',
+                'weather_api_key' => '',
+                'weather_font_size_px' => 16
+            ];
+            json_response($result ? array_merge($defaults, $result) : $defaults);
+
         } elseif ($request_method == 'PUT') {
             $data = json_decode(file_get_contents('php://input'), true);
-            $tiempo = intval($data['tiempo_transicion_seg']);
-            $efecto = $data['efecto_transicion'] ?? 'Disolver'; // Valor por defecto
+            
+            // Asignar valores desde la data o usar un valor por defecto coherente
+            $tiempo = intval($data['tiempo_transicion_seg'] ?? 10);
+            $efecto = $data['efecto_transicion'] ?? 'Disolver';
+            $fontSize = intval($data['font_size_px'] ?? 16);
+            $weatherCity = $data['weather_city'] ?? '';
+            $weatherApiKey = $data['weather_api_key'] ?? '';
+            $weatherFontSize = intval($data['weather_font_size_px'] ?? 16);
 
-            $stmt = $conn->prepare("UPDATE configuracion_marcos SET tiempo_transicion_seg = ?, efecto_transicion = ? WHERE marco_id = ?");
-            $stmt->bind_param("isi", $tiempo, $efecto, $marco_id);
+            $stmt = $conn->prepare("UPDATE configuracion_marcos SET 
+                tiempo_transicion_seg = ?, 
+                efecto_transicion = ?, 
+                font_size_px = ?,
+                weather_city = ?,
+                weather_api_key = ?,
+                weather_font_size_px = ?
+                WHERE marco_id = ?");
+            $stmt->bind_param("isissii", $tiempo, $efecto, $fontSize, $weatherCity, $weatherApiKey, $weatherFontSize, $marco_id);
+            
             if ($stmt->execute()) {
                 json_response(['success' => true]);
             } else {
@@ -208,6 +232,54 @@ switch ($route) {
             } else {
                 json_response(['error' => 'Error al eliminar las fotos de la base de datos.'], 500);
             }
+        }
+        break;
+
+    // --- Endpoint de Clima ---
+    case '/weather':
+        if ($request_method == 'GET') {
+            // 1. Obtener la configuración de la ciudad y la API key
+            $stmt = $conn->prepare("SELECT weather_city, weather_api_key FROM configuracion_marcos WHERE marco_id = ?");
+            $stmt->bind_param("i", $marco_id);
+            $stmt->execute();
+            $config = $stmt->get_result()->fetch_assoc();
+
+            if (!$config || empty($config['weather_city']) || empty($config['weather_api_key'])) {
+                json_response(['error' => 'La ciudad o la API key para el clima no están configuradas.'], 400);
+                break;
+            }
+
+            $city = $config['weather_city'];
+            $apiKey = $config['weather_api_key'];
+            $lang = 'es'; // Para obtener la descripción en español
+            $units = 'metric'; // Para obtener la temperatura en grados Celsius
+            $url = "https://api.openweathermap.org/data/2.5/weather?q={$city}&appid={$apiKey}&lang={$lang}&units={$units}";
+
+            // 2. Usar cURL para hacer la petición a la API externa
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10); // Tiempo de espera de 10 segundos
+            $api_response = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($http_code != 200) {
+                $error_details = json_decode($api_response, true);
+                json_response(['error' => 'Error al contactar el servicio de clima.', 'details' => $error_details['message'] ?? 'Respuesta no válida.'], 502); // 502 Bad Gateway
+                break;
+            }
+
+            $weather_data = json_decode($api_response, true);
+
+            // 3. Formatear y devolver una respuesta simplificada
+            $response = [
+                'temp' => round($weather_data['main']['temp']),
+                'description' => ucfirst($weather_data['weather'][0]['description']),
+                'icon' => $weather_data['weather'][0]['icon']
+            ];
+
+            json_response($response);
         }
         break;
 

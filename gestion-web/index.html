@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión del Portarretratos</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,28 +19,76 @@
         </header>
 
         <main>
-            <!-- Sección de Configuración -->
+            <!-- Sección de Configuración Unificada -->
             <section class="card">
-                <h2>Configuración</h2>
+                <h2>Configuración General</h2>
+                
                 <div class="form-group">
                     <label for="tiempo_transicion">⏰ Tiempo por Foto (en segundos)</label>
                     <input type="number" id="tiempo_transicion" min="1" value="10">
-                    <p class="help-text">Indica cuántos segundos durará cada imagen en la pantalla del Portarretratos. (Sugerencia: 10 a 15 segundos).</p>
                 </div>
-                <button id="btn_guardar_config">Guardar Configuración</button>
+                <div class="form-group">
+                    <label for="font_size">📏 Tamaño del Reloj (en píxeles)</label>
+                    <input type="number" id="font_size" min="8" max="100" value="16">
+                </div>
+
+                <hr class="section-divider">
+
+                <h3>Clima</h3>
+                <div class="form-group">
+                    <label for="weather_city">📍 Ciudad</label>
+                    <input type="text" id="weather_city" placeholder="Ej: Buenos Aires, AR">
+                    <p class="help-text">Indica tu ciudad y código de país (opcional) para mostrar el clima.</p>
+                </div>
+                <div class="form-group">
+                    <label for="weather_api_key">🔑 API Key de OpenWeatherMap</label>
+                    <input type="text" id="weather_api_key" placeholder="Pega aquí tu API Key">
+                    <p class="help-text">Necesitas una clave (API Key) gratuita de OpenWeatherMap. <a href="https://home.openweathermap.org/users/sign_up" target="_blank">Consíguela aquí</a>.</p>
+                </div>
+                <div class="form-group">
+                    <label for="weather_font_size">📏 Tamaño del Clima (en píxeles)</label>
+                    <input type="number" id="weather_font_size" min="8" max="100" value="16">
+                </div>
+
+                <div class="form-actions">
+                    <button id="btn_guardar_config">Guardar Configuración</button>
+                </div>
             </section>
 
-            <!-- Sección de Carga de Contenido -->
+            <!-- Sección de Carga de Video -->
             <section class="card">
-                <h2>Contenido</h2>
-                <div class="form-group">
-                    <label for="file_input">⬆️ Subir Fotos</label>
-                    <p class="help-text">Haz clic en el botón para seleccionar tus archivos, o arrástralos y suéltalos en el área de abajo.</p>
-                    <input type="file" id="file_input" accept="image/*,video/*" style="display: none;" multiple>
-                    <button id="btn_subir_foto" class="upload-button">Seleccionar y Subir Foto(s)</button>
-                    <div id="drop-zone" class="drop-zone">
-                        <p>Arrastra y suelta los archivos aquí</p>
+                <h2>Subir Video</h2>
+                <form id="upload-video-form">
+                    <div class="form-group">
+                        <label for="video-file">📹 Archivo de Video</label>
+                        <input type="file" id="video-file" name="video" accept="video/*" required>
+                        <p class="help-text">Selecciona un único archivo de video para subir. Los formatos comunes como MP4, WebM, y OGG son recomendados.</p>
                     </div>
+                    <div class="form-actions">
+                        <button type="submit">Subir Video</button>
+                    </div>
+                </form>
+                <div id="video-progress-container" class="progress-container" style="display: none; margin-top: 15px;">
+                    <div id="video-progress-bar" class="progress-bar">0%</div>
+                </div>
+                <p id="video-upload-status" class="help-text" style="text-align: center; margin-top: 10px;"></p>
+            </section>
+
+            <!-- Sección de Carga de Contenido Múltiple (Fotos) -->
+            <section class="card">
+                <h2>Subir Fotos</h2>
+                <div class="form-group">
+                    <label for="file_input">⬆️ Seleccionar o Arrastrar Fotos</label>
+                    <p class="help-text">Puedes seleccionar múltiples imágenes a la vez. Los videos deben subirse desde la sección de "Subir Video".</p>
+                    <input type="file" id="file_input" accept="image/*" style="display: none;" multiple>
+                    <button id="btn_subir_foto" class="upload-button">Seleccionar Foto(s)</button>
+                    <div id="drop-zone" class="drop-zone">
+                        <p>Arrastra y suelta las imágenes aquí</p>
+                    </div>
+                    <div id="progress-container" class="progress-container" style="display: none;">
+                        <div id="progress-bar" class="progress-bar"></div>
+                    </div>
+                    <p id="progress-text" class="help-text" style="text-align: center;"></p>
                 </div>
             </section>
 
@@ -55,16 +107,15 @@
             <!-- Sección de Galería -->
             <section class="card">
                 <div class="gallery-header">
-                    <h2>Imágenes Subidas</h2>
-                    <button id="btn_refresh_gallery" class="btn-secondary" title="Refrescar la galería de imágenes y vídeos">Refrescar Galería</button>
-                    <button id="btn_import_server" class="btn-secondary" title="Busca y procesa archivos subidos manualmente a la carpeta 'importar' en el servidor">Importar desde Servidor</button>
-                </div>
-                <div class="gallery-controls-group">
-                    <button id="btn_delete_all_photos" class="btn-danger">Eliminar Todo</button>
-                </div>
+                    <h2>Contenido Subido</h2>
+                    <div class="gallery-actions">
+                        <button id="btn_refresh_gallery" class="btn-secondary" title="Refrescar la galería de imágenes y vídeos">Refrescar</button>
+                        <button id="btn_import_server" class="btn-secondary" title="Busca y procesa archivos subidos manualmente a la carpeta 'importar' en el servidor">Importar desde Servidor</button>
+                        <button id="btn_delete_all_photos" class="btn-danger">Eliminar Todo</button>
+                    </div>
                 </div>
                 <div id="photo-list-container">
-                    <p class="help-text">Cargando imágenes...</p>
+                    <p class="help-text">Cargando...</p>
                 </div>
             </section>
         </main>

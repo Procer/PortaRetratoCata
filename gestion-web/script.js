@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Elementos del DOM ---
     const tiempoInput = document.getElementById('tiempo_transicion');
+    const fontSizeInput = document.getElementById('font_size');
+    const weatherCityInput = document.getElementById('weather_city');
+    const weatherApiKeyInput = document.getElementById('weather_api_key');
+    const weatherFontSizeInput = document.getElementById('weather_font_size');
     const btnGuardarConfig = document.getElementById('btn_guardar_config');
     const btnSubirFoto = document.getElementById('btn_subir_foto');
     const fileInput = document.getElementById('file_input');
@@ -14,6 +18,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRefreshGallery = document.getElementById('btn_refresh_gallery');
     const btnGoogleFotosConnect = document.getElementById('btn_google_fotos_connect');
     const dropZone = document.getElementById('drop-zone');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    
+    // --- Elementos del DOM para Video ---
+    const videoForm = document.getElementById('upload-video-form');
+    const videoFileInput = document.getElementById('video-file');
+    const videoProgressContainer = document.getElementById('video-progress-container');
+    const videoProgressBar = document.getElementById('video-progress-bar');
+    const videoUploadStatus = document.getElementById('video-upload-status');
+
 
     // --- Función para mostrar mensajes de feedback ---
     const showFeedback = (message, isError = false) => {
@@ -22,38 +37,105 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { feedbackMessage.classList.remove('show'); }, 3000);
     };
 
-    // --- Lógica de subida de archivos ---
+    // --- Lógica de subida de VIDEO ---
+    const uploadVideo = (file) => {
+        if (!file) {
+            showFeedback('Por favor, selecciona un archivo de video.', true);
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('video', file);
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+                const percentComplete = Math.round((event.loaded / event.total) * 100);
+                videoProgressContainer.style.display = 'block';
+                videoProgressBar.style.width = percentComplete + '%';
+                videoProgressBar.textContent = percentComplete + '%';
+                videoUploadStatus.textContent = `Subiendo... ${percentComplete}%`;
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            videoProgressBar.textContent = '¡Completo!';
+            videoUploadStatus.textContent = 'Procesando video...';
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        showFeedback('¡Video subido con éxito!', false);
+                        fetchPhotos(); // Refrescar la galería
+                    } else {
+                        throw new Error(response.error || 'Error desconocido en el servidor.');
+                    }
+                } catch (e) {
+                     showFeedback('Error al procesar la respuesta del servidor.', true);
+                     videoUploadStatus.textContent = 'Error de respuesta del servidor.';
+                }
+            } else {
+                showFeedback(`Error en la subida: ${xhr.statusText}`, true);
+                videoUploadStatus.textContent = `Error: ${xhr.statusText}`;
+            }
+            
+            // Ocultar la barra de progreso después de un momento
+            setTimeout(() => {
+                videoProgressContainer.style.display = 'none';
+                videoUploadStatus.textContent = '';
+                videoForm.reset();
+            }, 4000);
+        });
+
+        xhr.addEventListener('error', () => {
+            showFeedback('Error de red durante la subida.', true);
+            videoUploadStatus.textContent = 'Error de red. Inténtalo de nuevo.';
+            videoProgressContainer.style.display = 'none';
+        });
+
+        xhr.open('POST', `${API_BASE_URL}/upload_video.php`, true);
+        xhr.setRequestHeader('X-Api-Token', API_TOKEN);
+        xhr.send(formData);
+    };
+
+    // --- Lógica de subida de FOTOS (múltiple) ---
     const uploadFiles = async (files) => {
         if (!files || files.length === 0) return;
 
         const originalButtonText = btnSubirFoto.textContent;
         btnSubirFoto.disabled = true;
+        btnSubirFoto.textContent = 'Subiendo...';
 
         const BATCH_SIZE = 50;
-        let totalUploaded = 0;
-        const validFiles = Array.from(files).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
+        // Modificado para aceptar solo imágenes
+        const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
         
         if (validFiles.length !== files.length) {
-            showFeedback('Algunos archivos no eran imágenes o videos y fueron ignorados.', true);
+            showFeedback('Algunos archivos no eran imágenes y fueron ignorados.', true);
         }
 
         if (validFiles.length === 0) {
-            showFeedback('No se seleccionaron archivos de imagen o video válidos.', true);
+            showFeedback('No se seleccionaron archivos de imagen válidos.', true);
             btnSubirFoto.disabled = false;
+            btnSubirFoto.textContent = originalButtonText;
             return;
         }
 
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '';
+
+        let totalUploaded = 0;
         for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
             const batch = validFiles.slice(i, i + BATCH_SIZE);
-            const batchNumber = (i / BATCH_SIZE) + 1;
-            const totalBatches = Math.ceil(validFiles.length / BATCH_SIZE);
-
-            btnSubirFoto.textContent = `Subiendo lote ${batchNumber} de ${totalBatches}...`;
-            
             const formData = new FormData();
+            // Asegurarse que el backend espera 'photos[]'
             batch.forEach(file => formData.append('photos[]', file));
 
             try {
+                // El endpoint de subida de fotos sigue siendo /photos
                 const response = await fetch(`${API_BASE_URL}/photos`, {
                     method: 'POST',
                     headers: { 'X-Api-Token': API_TOKEN },
@@ -61,22 +143,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 const data = await response.json();
-                if (!data.success) throw new Error(data.error || `Error en el lote ${batchNumber}`);
-                
+                if (!response.ok) throw new Error(data.error || `Error en el servidor`);
+
                 totalUploaded += data.uploaded_count || batch.length;
-                showFeedback(`Lote ${batchNumber} subido. Total: ${totalUploaded} / ${validFiles.length}`);
+                const progress = Math.round((totalUploaded / validFiles.length) * 100);
+                
+                progressBar.style.width = `${progress}%`;
+                progressBar.textContent = `${progress}%`;
+                progressText.textContent = `Subidos ${totalUploaded} de ${validFiles.length} archivos.`;
+
             } catch (error) {
-                showFeedback(`Error al subir el lote ${batchNumber}: ${error.message}`, true);
-                break;
+                showFeedback(`Error durante la subida: ${error.message}`, true);
+                progressText.textContent = `Error. La subida se detuvo.`;
+                break; 
             }
         }
 
-        showFeedback(`¡Proceso de subida completado! Total subidos: ${totalUploaded}`, false);
+        showFeedback(`¡Proceso de subida de fotos completado!`, false);
         fetchPhotos();
+
+        // Ocultar la barra de progreso después de un par de segundos
+        setTimeout(() => {
+            progressContainer.style.display = 'none';
+            progressText.textContent = '';
+        }, 4000);
 
         btnSubirFoto.textContent = originalButtonText;
         btnSubirFoto.disabled = false;
-        fileInput.value = ''; // Limpia el input para poder subir los mismos archivos de nuevo
+        fileInput.value = '';
     };
 
     /**
@@ -178,19 +272,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchConfig = () => {
         fetch(`${API_BASE_URL}/config`, { headers: { 'X-Api-Token': API_TOKEN } })
             .then(response => response.json())
-            .then(data => { if (data.tiempo_transicion_seg) tiempoInput.value = data.tiempo_transicion_seg; })
+            .then(data => { 
+                if (data.tiempo_transicion_seg) tiempoInput.value = data.tiempo_transicion_seg;
+                if (data.font_size_px) fontSizeInput.value = data.font_size_px;
+                if (data.weather_city) weatherCityInput.value = data.weather_city;
+                if (data.weather_api_key) weatherApiKeyInput.value = data.weather_api_key;
+                if (data.weather_font_size_px) weatherFontSizeInput.value = data.weather_font_size_px;
+            })
             .catch(error => console.error('Error al cargar la configuración:', error));
     };
 
     // --- Event Listeners ---
     btnGuardarConfig.addEventListener('click', () => {
-        const tiempo = parseInt(tiempoInput.value, 10);
-        if (tiempo < 1) return showFeedback('El tiempo debe ser de al menos 1 segundo.', true);
+        const payload = {
+            tiempo_transicion_seg: parseInt(tiempoInput.value, 10),
+            font_size_px: parseInt(fontSizeInput.value, 10),
+            weather_city: weatherCityInput.value.trim(),
+            weather_api_key: weatherApiKeyInput.value.trim(),
+            weather_font_size_px: parseInt(weatherFontSizeInput.value, 10)
+        };
+
+        if (payload.tiempo_transicion_seg < 1) return showFeedback('El tiempo debe ser de al menos 1 segundo.', true);
+        if (payload.font_size_px < 8 || payload.font_size_px > 100) return showFeedback('El tamaño de la fuente del reloj debe estar entre 8 y 100.', true);
+        if (payload.weather_font_size_px < 8 || payload.weather_font_size_px > 100) return showFeedback('El tamaño de la fuente del clima debe estar entre 8 y 100.', true);
+
+        // Validar que si se pone una ciudad, también se ponga la API key
+        if (payload.weather_city && !payload.weather_api_key) {
+            return showFeedback('Si especificas una ciudad, también debes proporcionar una API Key.', true);
+        }
         
         fetch(`${API_BASE_URL}/config`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
-            body: JSON.stringify({ tiempo_transicion_seg: tiempo })
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {
@@ -223,7 +337,21 @@ document.addEventListener('DOMContentLoaded', () => {
     dropZone.addEventListener('drop', (event) => {
         event.preventDefault();
         dropZone.classList.remove('drag-over');
-        uploadFiles(event.dataTransfer.files);
+        
+        const files = event.dataTransfer.files;
+        const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+        const videoFiles = Array.from(files).filter(file => file.type.startsWith('video/'));
+
+        if (videoFiles.length > 0) {
+            showFeedback('Para subir videos, por favor usa la sección "Subir Video".', true);
+        }
+        
+        if (imageFiles.length > 0) {
+            uploadFiles(imageFiles);
+        } else if (videoFiles.length === 0) {
+            // Solo muestra este mensaje si no se soltaron ni imágenes ni videos válidos
+            showFeedback('No se encontraron imágenes válidas en los archivos que soltaste.', true);
+        }
     });
 
     btnRefreshGallery.addEventListener('click', fetchPhotos);
@@ -315,4 +443,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Carga Inicial de Datos ---
     fetchConfig();
     fetchPhotos();
+
+    // --- Event Listener para el formulario de Video ---
+    videoForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const file = videoFileInput.files[0];
+        uploadVideo(file);
+    });
 });

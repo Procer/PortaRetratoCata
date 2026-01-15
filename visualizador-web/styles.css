@@ -15,7 +15,7 @@ html, body {
     position: relative;
 }
 
-.slideshow-image {
+.slideshow-image, .slideshow-video {
     position: absolute;
     top: 0;
     left: 0;
@@ -26,8 +26,46 @@ html, body {
     transition: opacity 1.5s ease-in-out; /* Duración de la transición "Disolver" */
 }
 
-.slideshow-image.visible {
+.slideshow-image.visible, .slideshow-video.visible {
     opacity: 1; /* Se hace visible */
+}
+
+/* --- Estilos del Clima --- */
+#weather-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-family: sans-serif;
+    font-size: 16px; /* Tamaño por defecto, se sobreescribe con JS */
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0; /* Empieza invisible hasta que carguen los datos */
+    transition: opacity 0.5s ease-in-out;
+}
+
+#weather-container.loaded {
+    opacity: 1;
+}
+
+.weather-temp {
+    font-size: 1.2em; /* Relativo al tamaño de fuente del contenedor */
+    font-weight: bold;
+}
+
+.weather-desc {
+    font-size: 0.9em;
+    text-transform: capitalize;
+}
+
+.weather-icon {
+    width: 3em; /* Relativo al tamaño de fuente */
+    height: 3em;
 }
 
 #datetime-container {
