@@ -1,5 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- Lógica de Pestañas ---
+    const tabContainer = document.querySelector('.tabs');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabContainer.addEventListener('click', (event) => {
+        const clickedButton = event.target.closest('.tab-button');
+        if (!clickedButton) return;
+
+        const tabId = clickedButton.dataset.tab;
+        
+        // Ocultar todos los contenidos y desactivar todos los botones
+        tabButtons.forEach(button => button.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+
+        // Activar el botón y el contenido seleccionados
+        const contentToShow = document.getElementById(`tab-${tabId}`);
+        clickedButton.classList.add('active');
+        if (contentToShow) {
+            contentToShow.classList.add('active');
+        }
+    });
+
     // --- Configuración Esencial ---
     const API_TOKEN = 'TOKEN_SEGURO_12345';
     const API_BASE_URL = '../backend-php';

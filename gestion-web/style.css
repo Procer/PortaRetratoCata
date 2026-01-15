@@ -351,40 +351,191 @@ button.btn-danger:hover {
 }
 
 /* --- Ocultar Google Fotos --- */
+
 #google-photos-section {
+
     display: none !important;
+
 }
 
+
+
+/* --- Estilos para Pestañas --- */
+
+.tabs {
+
+    display: flex;
+
+    gap: 8px;
+
+    margin-bottom: 24px;
+
+    border-bottom: 1px solid var(--color-borde);
+
+}
+
+
+
+.tab-button {
+
+    padding: 10px 20px;
+
+    cursor: pointer;
+
+    background: none;
+
+    border: none;
+
+    border-bottom: 2px solid transparent;
+
+    font-size: 1rem;
+
+    font-weight: 600;
+
+    color: var(--color-texto-secundario);
+
+    transition: color 0.2s ease, border-color 0.2s ease;
+
+    transform: none; /* Sobrescribir hover general de botones */
+
+}
+
+
+
+.tab-button:hover {
+
+    color: var(--color-texto-principal);
+
+    background: none; /* Sobrescribir hover general de botones */
+
+    transform: none; /* Sobrescribir hover general de botones */
+
+}
+
+
+
+.tab-button.active {
+
+    color: var(--color-primario);
+
+    border-bottom-color: var(--color-primario);
+
+}
+
+
+
+.tab-content {
+
+    display: none;
+
+}
+
+
+
+.tab-content.active {
+
+    display: block;
+
+}
+
+
+
+.tab-explanation {
+
+    font-size: 1rem;
+
+    color: var(--color-texto-secundario);
+
+    background-color: #f8f9fa;
+
+    border-radius: var(--radio-borde);
+
+    padding: 16px;
+
+    margin-bottom: 24px;
+
+    border: 1px solid var(--color-borde);
+
+}
+
+
+
 /* --- Responsividad --- */
+
 @media (max-width: 600px) {
+
     body {
+
         padding: 16px;
+
     }
+
     .container {
+
         padding: 0;
+
     }
+
     header h1 {
+
         font-size: 2.25rem;
+
     }
+
     .card {
+
         padding: 24px;
+
     }
+
     .gallery-header {
+
         flex-direction: column;
+
         align-items: flex-start;
+
     }
+
     .gallery-actions {
+
         width: 100%;
+
         justify-content: flex-start;
+
     }
+
     #photo-list-container {
+
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+
         gap: 12px;
+
     }
+
     .form-actions {
+
         text-align: center;
+
     }
+
     .form-actions button {
+
         width: 100%;
+
     }
+
+    .tabs {
+
+        gap: 4px;
+
+    }
+
+    .tab-button {
+
+        padding: 10px 12px;
+
+        font-size: 0.9rem;
+
+    }
+
 }
