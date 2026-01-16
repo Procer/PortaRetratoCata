@@ -296,7 +296,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Cargar configuración inicial ---
     const fetchConfig = () => {
-        fetch(`${API_BASE_URL}/config`, { headers: { 'X-Api-Token': API_TOKEN } })
+        fetch(`${API_BASE_URL}/config`, { 
+            headers: { 
+                'X-Api-Token': API_TOKEN,
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            } 
+        })
             .then(response => response.json())
             .then(data => { 
                 currentConfig = data; // <-- Guardar la configuración en la variable de estado
