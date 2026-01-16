@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Estado de la Aplicación ---
+    let currentConfig = {}; // Variable para mantener la configuración actual
+
     // --- Configuración Esencial ---
     const API_TOKEN = 'TOKEN_SEGURO_12345';
     const API_BASE_URL = '../backend-php';
