@@ -1,7 +1,7 @@
 {
     "terminal.integrated.env.windows": {
-        "USERPROFILE": "C:\\GeminiConfig\\CuentaZSG",
+        "USERPROFILE": "C:\\GeminiConfig\\CuentaSistemasZarcam",
         "HOMEDRIVE": "C:",
-        "HOMEPATH": "\\GeminiConfig\\CuentaZSG"
+        "HOMEPATH": "\\GeminiConfig\\CuentaSistemasZarcam"
     }
 }

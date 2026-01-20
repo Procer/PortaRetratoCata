@@ -110,13 +110,38 @@
                         <p class="help-text">Usa el formato "Ciudad, CódigoPaís" (ej: London, UK).</p>
                     </div>
                     <div class="form-group">
-                        <label for="weather_api_key">🔑 API Key de OpenWeatherMap</label>
+                        <label for="weather_api_key">🔑 API Key de WeatherAPI.com</label>
                         <input type="text" id="weather_api_key" placeholder="Pega aquí tu API Key">
-                        <p class="help-text"><a href="https://home.openweathermap.org/users/sign_up" target="_blank">Consigue tu API Key gratuita aquí</a>.</p>
+                        <p class="help-text"><a href="https://www.weatherapi.com/" target="_blank">Consigue tu API Key gratuita aquí</a>.</p>
                     </div>
                     <div class="form-group">
                         <label for="weather_font_size">📏 Tamaño del Clima (en píxeles)</label>
                         <input type="number" id="weather_font_size" min="8" max="100" value="16">
+                    </div>
+
+                    <hr class="section-divider">
+
+                    <h3>Pronóstico por Horarios</h3>
+                    <p class="help-text">Define los rangos de horario para mostrar el pronóstico del día y del día siguiente. Déjalos en blanco para desactivar esta función.</p>
+                    <div class="form-group-grid">
+                        <div class="form-group">
+                            <label for="forecast_morning_start">☀️ Inicio Pronóstico Mañana</label>
+                            <input type="time" id="forecast_morning_start">
+                        </div>
+                        <div class="form-group">
+                            <label for="forecast_morning_end">☀️ Fin Pronóstico Mañana</label>
+                            <input type="time" id="forecast_morning_end">
+                        </div>
+                    </div>
+                     <div class="form-group-grid">
+                        <div class="form-group">
+                            <label for="forecast_evening_start">🌙 Inicio Pronóstico Noche</label>
+                            <input type="time" id="forecast_evening_start">
+                        </div>
+                        <div class="form-group">
+                            <label for="forecast_evening_end">🌙 Fin Pronóstico Noche</label>
+                            <input type="time" id="forecast_evening_end">
+                        </div>
                     </div>
     
                     <div class="form-actions">

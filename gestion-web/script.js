@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const weatherCityInput = document.getElementById('weather_city');
     const weatherApiKeyInput = document.getElementById('weather_api_key');
     const weatherFontSizeInput = document.getElementById('weather_font_size');
+    const morningStartInput = document.getElementById('forecast_morning_start');
+    const morningEndInput = document.getElementById('forecast_morning_end');
+    const eveningStartInput = document.getElementById('forecast_evening_start');
+    const eveningEndInput = document.getElementById('forecast_evening_end');
     const btnGuardarConfig = document.getElementById('btn_guardar_config');
     const btnSubirFoto = document.getElementById('btn_subir_foto');
     const fileInput = document.getElementById('file_input');
@@ -249,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 div.appendChild(indicator);
                 
                 // Generar y mostrar la miniatura del vídeo
-                generateVideoThumbnail(`${API_BASE_URL}/${item.url}`)
+                generateVideoThumbnail(item.url)
                     .then(thumbnailUrl => {
                         const img = document.createElement('img');
                         img.src = thumbnailUrl;
@@ -260,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 const img = document.createElement('img');
-                img.src = `${API_BASE_URL}/${item.url}`;
+                img.src = item.url;
                 img.alt = 'Miniatura';
                 img.loading = 'lazy';
                 div.insertBefore(img, div.firstChild);
@@ -311,6 +315,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.weather_city) weatherCityInput.value = data.weather_city;
                 if (data.weather_api_key) weatherApiKeyInput.value = data.weather_api_key;
                 if (data.weather_font_size_px) weatherFontSizeInput.value = data.weather_font_size_px;
+                // Cargar valores de los nuevos campos de tiempo. Si son null, se asigna un string vacío.
+                if (morningStartInput) morningStartInput.value = data.forecast_morning_start || '';
+                if (morningEndInput) morningEndInput.value = data.forecast_morning_end || '';
+                if (eveningStartInput) eveningStartInput.value = data.forecast_evening_start || '';
+                if (eveningEndInput) eveningEndInput.value = data.forecast_evening_end || '';
             })
             .catch(error => console.error('Error al cargar la configuración:', error));
     };
@@ -323,7 +332,11 @@ document.addEventListener('DOMContentLoaded', () => {
             font_size_px: parseInt(fontSizeInput.value, 10),
             weather_city: weatherCityInput.value.trim(),
             weather_api_key: weatherApiKeyInput.value.trim(),
-            weather_font_size_px: parseInt(weatherFontSizeInput.value, 10)
+            weather_font_size_px: parseInt(weatherFontSizeInput.value, 10),
+            forecast_morning_start: morningStartInput.value,
+            forecast_morning_end: morningEndInput.value,
+            forecast_evening_start: eveningStartInput.value,
+            forecast_evening_end: eveningEndInput.value
         };
 
         // Fusionar la configuración actual con los nuevos valores
@@ -353,9 +366,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnSubirFoto.addEventListener('click', () => fileInput.click());
 
-    btnGoogleFotosConnect.addEventListener('click', () => {
-        window.location.href = API_BASE_URL + '/admin.php';
-    });
+    if (btnGoogleFotosConnect) {
+        btnGoogleFotosConnect.addEventListener('click', () => {
+            window.location.href = API_BASE_URL + '/admin.php';
+        });
+    }
 
     fileInput.addEventListener('change', () => {
         uploadFiles(fileInput.files);
@@ -482,9 +497,11 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchPhotos();
 
     // --- Event Listener para el formulario de Video ---
-    videoForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const file = videoFileInput.files[0];
-        uploadVideo(file);
-    });
+    if (videoForm) {
+        videoForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const file = videoFileInput.files[0];
+            uploadVideo(file);
+        });
+    }
 });
