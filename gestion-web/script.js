@@ -59,6 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoProgressBar = document.getElementById('video-progress-bar');
     const videoUploadStatus = document.getElementById('video-upload-status');
 
+    // --- Elementos del DOM para Álbumes ---
+    const newAlbumNameInput = document.getElementById('new_album_name');
+    const btnCreateAlbum = document.getElementById('btn_create_album');
+    const albumsListContainer = document.getElementById('albums-list-container');
+    const photoAlbumSelect = document.getElementById('photo-album-select');
+    const videoAlbumSelect = document.getElementById('video-album-select');
+
 
     // --- Función para mostrar mensajes de feedback ---
     const showFeedback = (message, isError = false) => {
@@ -67,15 +74,171 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { feedbackMessage.classList.remove('show'); }, 3000);
     };
 
+    // --- Funciones de Gestión de Álbumes ---
+    let currentAlbums = []; // Almacena la lista actual de álbumes
+
+    const fetchAlbums = async () => {
+        albumsListContainer.innerHTML = '<p class="help-text">Cargando álbumes...</p>';
+        try {
+            const response = await fetch(`${API_BASE_URL}/albums`, { headers: { 'X-Api-Token': API_TOKEN } });
+            if (!response.ok) throw new Error('No se pudo obtener la lista de álbumes.');
+            currentAlbums = await response.json();
+            renderAlbums();
+            populateAlbumSelects();
+        } catch (error) {
+            console.error('Error al obtener álbumes:', error);
+            albumsListContainer.innerHTML = `<p class="help-text error">Error al cargar álbumes: ${error.message}</p>`;
+        }
+    };
+
+    const renderAlbums = () => {
+        albumsListContainer.innerHTML = '';
+        if (currentAlbums.length === 0) {
+            albumsListContainer.innerHTML = '<p class="help-text">No hay álbumes creados. ¡Crea uno nuevo!</p>';
+            return;
+        }
+
+        currentAlbums.forEach(album => {
+            const albumItem = document.createElement('div');
+            albumItem.className = `album-item ${album.is_active ? 'active-album' : ''}`;
+            albumItem.dataset.albumId = album.id;
+            
+            albumItem.innerHTML = `
+                <div class="album-info">
+                    <span class="album-name-display">${album.name} ${album.is_active ? ' (Activo)' : ''}</span>
+                    <input type="text" class="album-name-edit" value="${album.name}" style="display: none;">
+                </div>
+                <div class="album-actions">
+                    <button class="btn-secondary btn-edit-album" title="Renombrar">✏️</button>
+                    <button class="btn-secondary btn-save-album" title="Guardar" style="display: none;">💾</button>
+                    <button class="btn-secondary btn-cancel-edit" title="Cancelar" style="display: none;">❌</button>
+                    <button class="btn-primary btn-activate-album" ${album.is_active ? 'disabled' : ''} title="Activar este álbum">✅</button>
+                    <button class="btn-danger btn-delete-album" title="Eliminar álbum y su contenido">🗑️</button>
+                </div>
+            `;
+            albumsListContainer.appendChild(albumItem);
+        });
+    };
+
+    const populateAlbumSelects = () => {
+        if (!photoAlbumSelect || !videoAlbumSelect) return;
+
+        photoAlbumSelect.innerHTML = '<option value="">-- Seleccionar Álbum --</option>';
+        videoAlbumSelect.innerHTML = '<option value="">-- Seleccionar Álbum --</option>';
+
+        const activeAlbum = currentAlbums.find(album => album.is_active);
+
+        currentAlbums.forEach(album => {
+            const optionPhoto = document.createElement('option');
+            optionPhoto.value = album.id;
+            optionPhoto.textContent = album.name + (album.is_active ? ' (Activo)' : '');
+            if (activeAlbum && album.id === activeAlbum.id) {
+                optionPhoto.selected = true;
+            }
+            photoAlbumSelect.appendChild(optionPhoto);
+
+            const optionVideo = document.createElement('option');
+            optionVideo.value = album.id;
+            optionVideo.textContent = album.name + (album.is_active ? ' (Activo)' : '');
+             if (activeAlbum && album.id === activeAlbum.id) {
+                optionVideo.selected = true;
+            }
+            videoAlbumSelect.appendChild(optionVideo);
+        });
+    };
+
+    const createAlbum = async () => {
+        const name = newAlbumNameInput.value.trim();
+        if (!name) {
+            showFeedback('El nombre del álbum no puede estar vacío.', true);
+            return;
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/albums`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
+                body: JSON.stringify({ name })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Error desconocido al crear el álbum.');
+            
+            showFeedback('¡Álbum creado con éxito!');
+            newAlbumNameInput.value = '';
+            fetchAlbums(); // Refrescar la lista de álbumes
+        } catch (error) {
+            showFeedback(`Error al crear álbum: ${error.message}`, true);
+        }
+    };
+
+    const activateAlbum = async (albumId) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/albums/${albumId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
+                body: JSON.stringify({ is_active: true })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Error desconocido al activar el álbum.');
+            showFeedback('¡Álbum activado con éxito!');
+            fetchAlbums(); // Refrescar la lista de álbumes y la galería
+            fetchPhotos(); // Refrescar la galería para mostrar el nuevo álbum activo
+        } catch (error) {
+            showFeedback(`Error al activar álbum: ${error.message}`, true);
+        }
+    };
+
+    const renameAlbum = async (albumId, newName) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/albums/${albumId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
+                body: JSON.stringify({ name: newName })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Error desconocido al renombrar el álbum.');
+            showFeedback('¡Álbum renombrado con éxito!');
+            fetchAlbums(); // Refrescar la lista de álbumes
+        } catch (error) {
+            showFeedback(`Error al renombrar álbum: ${error.message}`, true);
+        }
+    };
+
+    const deleteAlbum = async (albumId) => {
+        if (!confirm('¿Estás seguro de que quieres eliminar este álbum y TODO su contenido (fotos y vídeos) PERMANENTEMENTE? Esta acción no se puede deshacer.')) {
+            return;
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/albums/${albumId}`, {
+                method: 'DELETE',
+                headers: { 'X-Api-Token': API_TOKEN }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Error desconocido al eliminar el álbum.');
+            showFeedback('¡Álbum y su contenido eliminados con éxito!');
+            fetchAlbums(); // Refrescar la lista de álbumes
+            fetchPhotos(); // Refrescar la galería
+        } catch (error) {
+            showFeedback(`Error al eliminar álbum: ${error.message}`, true);
+        }
+    };
+
     // --- Lógica de subida de VIDEO ---
+    // Deprecated: upload_video.php is no longer used. All uploads go through /photos.
     const uploadVideo = (file) => {
         if (!file) {
             showFeedback('Por favor, selecciona un archivo de video.', true);
             return;
         }
 
+        const albumId = videoAlbumSelect.value;
+        if (!albumId) {
+            showFeedback('Por favor, selecciona un álbum para el video.', true);
+            return;
+        }
+
         const formData = new FormData();
         formData.append('video', file);
+        formData.append('album_id', albumId); // Añadir el ID del álbum
 
         const xhr = new XMLHttpRequest();
 
@@ -125,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoProgressContainer.style.display = 'none';
         });
 
-        xhr.open('POST', `${API_BASE_URL}/upload_video.php`, true);
+        xhr.open('POST', `${API_BASE_URL}/photos`, true); // Usar el endpoint unificado /photos
         xhr.setRequestHeader('X-Api-Token', API_TOKEN);
         xhr.send(formData);
     };
@@ -133,6 +296,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Lógica de subida de FOTOS (múltiple) ---
     const uploadFiles = async (files) => {
         if (!files || files.length === 0) return;
+
+        const albumId = photoAlbumSelect.value;
+        if (!albumId) {
+            showFeedback('Por favor, selecciona un álbum para las fotos.', true);
+            btnSubirFoto.disabled = false; // Asegurarse de que el botón no se quede deshabilitado
+            return;
+        }
 
         const originalButtonText = btnSubirFoto.textContent;
         btnSubirFoto.disabled = true;
@@ -161,11 +331,10 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
             const batch = validFiles.slice(i, i + BATCH_SIZE);
             const formData = new FormData();
-            // Asegurarse que el backend espera 'photos[]'
             batch.forEach(file => formData.append('photos[]', file));
+            formData.append('album_id', albumId); // Añadir el ID del álbum
 
             try {
-                // El endpoint de subida de fotos sigue siendo /photos
                 const response = await fetch(`${API_BASE_URL}/photos`, {
                     method: 'POST',
                     headers: { 'X-Api-Token': API_TOKEN },
@@ -190,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         showFeedback(`¡Proceso de subida de fotos completado!`, false);
-        fetchPhotos();
+        fetchPhotos(); // Refrescar la galería
 
         // Ocultar la barra de progreso después de un par de segundos
         setTimeout(() => {
@@ -273,9 +442,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const fetchPhotos = () => {
+    const fetchPhotos = (albumId = null) => { // albumId ahora es un parámetro opcional
         photoListContainer.innerHTML = '<p class="help-text">Cargando imágenes...</p>';
-        fetch(`${API_BASE_URL}/photos`, { headers: { 'X-Api-Token': API_TOKEN } })
+        let url = `${API_BASE_URL}/photos`;
+        if (albumId) {
+            url += `?album_id=${albumId}`; // Si se proporciona albumId, lo añadimos como query param
+        }
+        fetch(url, { headers: { 'X-Api-Token': API_TOKEN } })
             .then(response => response.ok ? response.json() : Promise.reject('No se pudo obtener la lista de fotos.'))
             .then(renderPhotos)
             .catch(error => {
@@ -293,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (!data.success) throw new Error(data.error || 'Error desconocido');
             showFeedback('¡Elemento eliminado con éxito!');
-            fetchPhotos();
+            fetchPhotos(); // Refrescar la galería después de eliminar
         })
         .catch(error => showFeedback(error.message, true));
     };
@@ -364,7 +537,17 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => showFeedback(`Error al guardar: ${error.message}`, true));
     });
 
+    // Event listener para el botón de subir foto (ahora solo para imágenes)
     btnSubirFoto.addEventListener('click', () => fileInput.click());
+
+    // Event listener para el formulario de Video (unificado con /photos)
+    if (videoForm) {
+        videoForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const file = videoFileInput.files[0];
+            uploadVideo(file);
+        });
+    }
 
     if (btnGoogleFotosConnect) {
         btnGoogleFotosConnect.addEventListener('click', () => {
@@ -464,25 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const btnDeleteAllPhotos = document.getElementById('btn_delete_all_photos');
-
-    btnDeleteAllPhotos.addEventListener('click', () => {
-        if (confirm('¿Estás seguro de que quieres eliminar TODAS las fotos y vídeos subidos permanentemente? Esta acción no se puede deshacer.')) {
-            fetch(`${API_BASE_URL}/photos/delete_all`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) throw new Error(data.error || 'Error desconocido al eliminar todas las fotos.');
-                showFeedback('¡Todas las fotos y vídeos han sido eliminados con éxito!');
-                fetchPhotos(); // Refrescar la galería
-            })
-            .catch(error => showFeedback(`Error al eliminar todas las fotos: ${error.message}`, true));
-        }
-    });
-
     photoListContainer.addEventListener('click', (event) => {
         if (event.target.classList.contains('delete-btn')) {
             const photoId = event.target.dataset.photoId;
@@ -492,16 +656,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Event Listeners para Álbumes ---
+    btnCreateAlbum.addEventListener('click', createAlbum);
+
+    albumsListContainer.addEventListener('click', (event) => {
+        const target = event.target;
+        const albumItem = target.closest('.album-item');
+        if (!albumItem) return;
+
+        const albumId = albumItem.dataset.albumId;
+
+        if (target.classList.contains('btn-activate-album')) {
+            activateAlbum(albumId);
+        } else if (target.classList.contains('btn-delete-album')) {
+            deleteAlbum(albumId);
+        } else if (target.classList.contains('btn-edit-album')) {
+            albumItem.querySelector('.album-name-display').style.display = 'none';
+            albumItem.querySelector('.btn-edit-album').style.display = 'none';
+            albumItem.querySelector('.btn-activate-album').style.display = 'none';
+            albumItem.querySelector('.btn-delete-album').style.display = 'none';
+
+            const editInput = albumItem.querySelector('.album-name-edit');
+            editInput.style.display = 'inline-block';
+            editInput.focus();
+            albumItem.querySelector('.btn-save-album').style.display = 'inline-block';
+            albumItem.querySelector('.btn-cancel-edit').style.display = 'inline-block';
+        } else if (target.classList.contains('btn-save-album')) {
+            const newName = albumItem.querySelector('.album-name-edit').value.trim();
+            if (newName && newName !== albumItem.querySelector('.album-name-display').textContent.split(' ')[0]) { // Comparar solo con el nombre, no con "(Activo)"
+                renameAlbum(albumId, newName);
+            }
+            // Restaurar visualización
+            albumItem.querySelector('.album-name-display').style.display = 'inline-block';
+            albumItem.querySelector('.album-name-edit').style.display = 'none';
+            albumItem.querySelector('.btn-save-album').style.display = 'none';
+            albumItem.querySelector('.btn-cancel-edit').style.display = 'none';
+            albumItem.querySelector('.btn-edit-album').style.display = 'inline-block';
+            albumItem.querySelector('.btn-activate-album').style.display = 'inline-block';
+            albumItem.querySelector('.btn-delete-album').style.display = 'inline-block';
+        } else if (target.classList.contains('btn-cancel-edit')) {
+            // Restaurar visualización
+            albumItem.querySelector('.album-name-display').style.display = 'inline-block';
+            albumItem.querySelector('.album-name-edit').style.display = 'none';
+            albumItem.querySelector('.btn-save-album').style.display = 'none';
+            albumItem.querySelector('.btn-cancel-edit').style.display = 'none';
+            albumItem.querySelector('.btn-edit-album').style.display = 'inline-block';
+            albumItem.querySelector('.btn-activate-album').style.display = 'inline-block';
+            albumItem.querySelector('.btn-delete-album').style.display = 'inline-block';
+        }
+    });
+
+    // --- Lógica de Pestañas (Modificada para Álbumes) ---
+    tabContainer.addEventListener('click', (event) => {
+        const clickedButton = event.target.closest('.tab-button');
+        if (!clickedButton) return;
+
+        const tabId = clickedButton.dataset.tab;
+        
+        // Ocultar todos los contenidos y desactivar todos los botones
+        tabButtons.forEach(button => button.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+
+        // Activar el botón y el contenido seleccionados
+        const contentToShow = document.getElementById(`tab-${tabId}`);
+        clickedButton.classList.add('active');
+        if (contentToShow) {
+            contentToShow.classList.add('active');
+        }
+
+        // Si la pestaña de álbumes o galería es activada, refrescar la lista
+        if (tabId === 'albums') {
+            fetchAlbums();
+        } else if (tabId === 'galeria') {
+            fetchPhotos();
+        }
+    });
+
     // --- Carga Inicial de Datos ---
     fetchConfig();
-    fetchPhotos();
-
-    // --- Event Listener para el formulario de Video ---
-    if (videoForm) {
-        videoForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const file = videoFileInput.files[0];
-            uploadVideo(file);
-        });
-    }
+    fetchPhotos(); // Cargar las fotos del álbum activo al inicio
+    fetchAlbums(); // Cargar los álbumes al inicio, para poblar los selects
 });

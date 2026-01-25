@@ -121,9 +121,23 @@ switch ($route) {
 
     // --- Endpoint de Fotos ---
     case '/photos':
+        // GET: Listar fotos del álbum activo
         if ($request_method == 'GET') {
-            $stmt = $conn->prepare("SELECT id, url, media_type FROM fotos WHERE marco_id = ? ORDER BY created_at DESC");
+            // 1. Obtener el ID del álbum activo para este marco
+            $stmt = $conn->prepare("SELECT id FROM albums WHERE marco_id = ? AND is_active = TRUE");
             $stmt->bind_param("i", $marco_id);
+            $stmt->execute();
+            $active_album_result = $stmt->get_result()->fetch_assoc();
+            $active_album_id = $active_album_result ? $active_album_result['id'] : null;
+
+            if ($active_album_id === null) {
+                // No hay álbum activo, devolver vacío o error
+                json_response([]);
+                break;
+            }
+
+            $stmt = $conn->prepare("SELECT id, url, media_type FROM fotos WHERE marco_id = ? AND album_id = ? ORDER BY created_at DESC");
+            $stmt->bind_param("ii", $marco_id, $active_album_id);
             $stmt->execute();
             $result = $stmt->get_result();
             $fotos = [];
@@ -140,50 +154,130 @@ switch ($route) {
             }
             json_response($fotos);
         } elseif ($request_method == 'POST') {
-            if (isset($_FILES['photos'])) {
-                $files = $_FILES['photos'];
-                $upload_count = 0;
-                $errors = [];
+            // Lógica unificada para subir fotos y videos
+            // 1. Determinar el album_id de destino
+            $target_album_id = null;
+            if (isset($_POST['album_id'])) { // Desde formulario multipart/form-data
+                $target_album_id = (int)$_POST['album_id'];
+            } elseif (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
+                $data = json_decode(file_get_contents('php://input'), true);
+                $target_album_id = (int)($data['album_id'] ?? 0);
+            }
 
-                $upload_dir = 'public/contents/frame_' . $marco_id . '/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
-                }
-
-                // Iterar sobre cada archivo subido
-                for ($i = 0; $i < count($files['name']); $i++) {
-                    $file_name = uniqid() . '-' . basename($files['name'][$i]);
-                    $target_path = $upload_dir . $file_name;
-
-                    if (move_uploaded_file($files['tmp_name'][$i], $target_path)) {
-                        // Se almacena una URL relativa ($target_path) para que sea portable.
-                        $public_url = $target_path;
-                        
-                        // Determinar el tipo de medio (image o video)
-                        $mime_type = $files['type'][$i];
-                        $media_type = strpos($mime_type, 'video') === 0 ? 'video' : 'image';
-
-                        $stmt = $conn->prepare("INSERT INTO fotos (marco_id, url, media_type) VALUES (?, ?, ?)");
-                        $stmt->bind_param("iss", $marco_id, $public_url, $media_type);
-
-                        if ($stmt->execute()) {
-                            $upload_count++;
-                        } else {
-                            $errors[] = "Error al guardar '{$files['name'][$i]}' en la base de datos.";
-                        }
+            if (!$target_album_id) {
+                // Si no se especificó un album_id, buscar el activo o el primero
+                $stmt = $conn->prepare("SELECT id FROM albums WHERE marco_id = ? AND is_active = TRUE LIMIT 1");
+                $stmt->bind_param("i", $marco_id);
+                $stmt->execute();
+                $active_album_result = $stmt->get_result()->fetch_assoc();
+                if ($active_album_result) {
+                    $target_album_id = $active_album_result['id'];
+                } else {
+                    $stmt = $conn->prepare("SELECT id FROM albums WHERE marco_id = ? ORDER BY id ASC LIMIT 1");
+                    $stmt->bind_param("i", $marco_id);
+                    $stmt->execute();
+                    $first_album_result = $stmt->get_result()->fetch_assoc();
+                    if ($first_album_result) {
+                        $target_album_id = $first_album_result['id'];
                     } else {
-                        $errors[] = "Error al mover el archivo '{$files['name'][$i]}'.";
+                        json_response(['error' => 'No hay álbumes disponibles para subir el contenido.'], 400);
+                        break;
                     }
                 }
+            } else {
+                // Verificar que el album_id proporcionado pertenece al marco
+                $stmt = $conn->prepare("SELECT COUNT(*) FROM albums WHERE id = ? AND marco_id = ?");
+                $stmt->bind_param("ii", $target_album_id, $marco_id);
+                $stmt->execute();
+                $stmt->bind_result($count);
+                $stmt->fetch();
+                $stmt->close();
+                if ($count === 0) {
+                    json_response(['error' => 'El álbum especificado no existe o no pertenece a este marco.'], 404);
+                    break;
+                }
+            }
 
-                if ($upload_count > 0) {
-                    json_response(['success' => true, 'uploaded_count' => $upload_count, 'errors' => $errors], 201);
+            $upload_count = 0;
+            $errors = [];
+            $files_to_process = [];
+
+            // Unificar el manejo de archivos de fotos y videos
+            if (isset($_FILES['photos'])) {
+                if (is_array($_FILES['photos']['name'])) {
+                    // Múltiples fotos
+                    for ($i = 0; $i < count($_FILES['photos']['name']); $i++) {
+                        $files_to_process[] = [
+                            'name' => $_FILES['photos']['name'][$i],
+                            'type' => $_FILES['photos']['type'][$i],
+                            'tmp_name' => $_FILES['photos']['tmp_name'][$i],
+                            'error' => $_FILES['photos']['error'][$i],
+                            'size' => $_FILES['photos']['size'][$i],
+                        ];
+                    }
                 } else {
-                    json_response(['error' => 'No se pudo subir ningún archivo.', 'details' => $errors], 500);
+                    // Una sola foto subida como 'photos'
+                     $files_to_process[] = [
+                        'name' => $_FILES['photos']['name'],
+                        'type' => $_FILES['photos']['type'],
+                        'tmp_name' => $_FILES['photos']['tmp_name'],
+                        'error' => $_FILES['photos']['error'],
+                        'size' => $_FILES['photos']['size'],
+                    ];
+                }
+            } 
+            // Manejo específico para 'video' - deprecando upload_video.php
+            elseif (isset($_FILES['video'])) {
+                $files_to_process[] = [
+                    'name' => $_FILES['video']['name'],
+                    'type' => $_FILES['video']['type'],
+                    'tmp_name' => $_FILES['video']['tmp_name'],
+                    'error' => $_FILES['video']['error'],
+                    'size' => $_FILES['video']['size'],
+                ];
+            } else {
+                json_response(['error' => 'No se recibieron archivos. Asegúrate de que el input se llame \'photos[]\' o \'video\'.'], 400);
+                break;
+            }
+
+
+            $upload_dir = 'public/contents/frame_' . $marco_id . '/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+
+            foreach ($files_to_process as $file) {
+                if ($file['error'] !== UPLOAD_ERR_OK) {
+                    $errors[] = "Error al subir '{$file['name']}': Código de error {$file['error']}.";
+                    continue;
                 }
 
+                $file_name = uniqid() . '-' . basename($file['name']);
+                $target_path = $upload_dir . $file_name;
+
+                if (move_uploaded_file($file['tmp_name'], $target_path)) {
+                    $public_url = $target_path;
+                    $mime_type = $file['type'];
+                    $media_type = strpos($mime_type, 'video') === 0 ? 'video' : 'image';
+
+                    $stmt = $conn->prepare("INSERT INTO fotos (marco_id, album_id, url, media_type) VALUES (?, ?, ?, ?)");
+                    $stmt->bind_param("iiss", $marco_id, $target_album_id, $public_url, $media_type);
+
+                    if ($stmt->execute()) {
+                        $upload_count++;
+                    } else {
+                        $errors[] = "Error al guardar '{$file['name']}' en la base de datos.";
+                        @unlink($target_path); // Borrar archivo si falla la DB
+                    }
+                } else {
+                    $errors[] = "Error al mover el archivo '{$file['name']}'.";
+                }
+            }
+
+            if ($upload_count > 0) {
+                json_response(['success' => true, 'uploaded_count' => $upload_count, 'errors' => $errors], 201);
             } else {
-                json_response(['error' => 'No se recibieron archivos. Asegúrate de que el input se llame \'photos[]\'.'], 400);
+                json_response(['error' => 'No se pudo subir ningún archivo.', 'details' => $errors], 500);
             }
         }
         break;
@@ -236,46 +330,7 @@ switch ($route) {
         }
         break;
 
-    case '/photos/delete_all':
-        if ($request_method == 'POST') {
-            // 1. Obtener todas las URLs de los archivos para poder borrarlos del disco
-            $stmt = $conn->prepare("SELECT url FROM fotos WHERE marco_id = ?");
-            $stmt->bind_param("i", $marco_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $files_to_delete = [];
-            while ($row = $result->fetch_assoc()) {
-                $files_to_delete[] = $row['url'];
-            }
 
-            // 2. Borrar los registros de la base de datos
-            $delete_db_stmt = $conn->prepare("DELETE FROM fotos WHERE marco_id = ?");
-            $delete_db_stmt->bind_param("i", $marco_id);
-
-            if ($delete_db_stmt->execute()) {
-                // 3. Si el borrado de la DB fue exitoso, borrar los archivos físicos
-                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-                $host = $_SERVER['HTTP_HOST'];
-                $deleted_count = 0;
-                $errors = [];
-
-                foreach ($files_to_delete as $url) {
-                    // Convertir la URL pública a una ruta de archivo local
-                    $file_path = str_replace($protocol . $host . $base_path . '/', '', $url);
-                    if (file_exists($file_path)) {
-                        if (@unlink($file_path)) {
-                            $deleted_count++;
-                        } else {
-                            $errors[] = "No se pudo borrar '{$file_path}'. Verifique los permisos.";
-                        }
-                    }
-                }
-                json_response(['success' => true, 'deleted_files_count' => $deleted_count, 'errors' => $errors]);
-            } else {
-                json_response(['error' => 'Error al eliminar las fotos de la base de datos.'], 500);
-            }
-        }
-        break;
 
     // --- Endpoint de Clima ---
     case '/weather':
@@ -410,6 +465,156 @@ switch ($route) {
             }
 
             json_response($simplified_forecast);
+        }
+        break;
+
+    // --- Endpoint de Álbumes ---
+    case '/albums':
+    case preg_match('/^\/albums\/(\d+)$/', $route, $matches) ? true : false: // Para /albums/{id}
+        $album_id = isset($matches[1]) ? (int)$matches[1] : null;
+
+        // GET: Listar todos los álbumes del marco
+        if ($request_method == 'GET' && $album_id === null) {
+            $stmt = $conn->prepare("SELECT id, name, is_active FROM albums WHERE marco_id = ? ORDER BY name ASC");
+            $stmt->bind_param("i", $marco_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $albums = [];
+            while ($row = $result->fetch_assoc()) {
+                $albums[] = $row;
+            }
+            json_response($albums);
+        }
+        // POST: Crear un nuevo álbum
+        elseif ($request_method == 'POST' && $album_id === null) {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $album_name = trim($data['name'] ?? '');
+
+            if (empty($album_name)) {
+                json_response(['error' => 'El nombre del álbum no puede estar vacío.'], 400);
+            }
+
+            // Verificar si ya existe un álbum con ese nombre para este marco
+            $stmt = $conn->prepare("SELECT COUNT(*) FROM albums WHERE marco_id = ? AND name = ?");
+            $stmt->bind_param("is", $marco_id, $album_name);
+            $stmt->execute();
+            $stmt->bind_result($count);
+            $stmt->fetch();
+            $stmt->close();
+
+            if ($count > 0) {
+                json_response(['error' => 'Ya existe un álbum con ese nombre.'], 409); // 409 Conflict
+            }
+
+            $stmt = $conn->prepare("INSERT INTO albums (marco_id, name) VALUES (?, ?)");
+            $stmt->bind_param("is", $marco_id, $album_name);
+            if ($stmt->execute()) {
+                json_response(['success' => true, 'id' => $conn->insert_id, 'name' => $album_name, 'is_active' => false], 201);
+            } else {
+                json_response(['error' => 'Error al crear el álbum.'], 500);
+            }
+        }
+        // PUT: Actualizar un álbum (renombrar o activar)
+        elseif ($request_method == 'PUT' && $album_id !== null) {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $new_album_name = trim($data['name'] ?? '');
+            $set_active = $data['is_active'] ?? null; // Puede ser true, false o null
+
+            if (empty($new_album_name) && $set_active === null) {
+                json_response(['error' => 'No se proporcionaron datos para actualizar el álbum.'], 400);
+            }
+
+            // Verificar que el álbum pertenece al marco actual
+            $stmt = $conn->prepare("SELECT COUNT(*) FROM albums WHERE id = ? AND marco_id = ?");
+            $stmt->bind_param("ii", $album_id, $marco_id);
+            $stmt->execute();
+            $stmt->bind_result($count);
+            $stmt->fetch();
+            $stmt->close();
+
+            if ($count === 0) {
+                json_response(['error' => 'Álbum no encontrado o no pertenece a este marco.'], 404);
+            }
+
+            if (!empty($new_album_name)) {
+                // Verificar si el nuevo nombre ya existe para otro álbum en el mismo marco
+                $stmt = $conn->prepare("SELECT COUNT(*) FROM albums WHERE marco_id = ? AND name = ? AND id != ?");
+                $stmt->bind_param("isi", $marco_id, $new_album_name, $album_id);
+                $stmt->execute();
+                $stmt->bind_result($name_conflict);
+                $stmt->fetch();
+                $stmt->close();
+
+                if ($name_conflict > 0) {
+                    json_response(['error' => 'Ya existe otro álbum con ese nombre.'], 409);
+                }
+
+                $stmt = $conn->prepare("UPDATE albums SET name = ? WHERE id = ? AND marco_id = ?");
+                $stmt->bind_param("sii", $new_album_name, $album_id, $marco_id);
+                $stmt->execute();
+            }
+
+            if ($set_active !== null) {
+                // Si se intenta activar un álbum
+                if ($set_active) {
+                    // Desactivar todos los demás álbumes del mismo marco
+                    $stmt_deactivate = $conn->prepare("UPDATE albums SET is_active = FALSE WHERE marco_id = ?");
+                    $stmt_deactivate->bind_param("i", $marco_id);
+                    $stmt_deactivate->execute();
+
+                    // Activar el álbum especificado
+                    $stmt_activate = $conn->prepare("UPDATE albums SET is_active = TRUE WHERE id = ? AND marco_id = ?");
+                    $stmt_activate->bind_param("ii", $album_id, $marco_id);
+                    $stmt_activate->execute();
+                } else {
+                    // Si se intenta desactivar el álbum, solo se desactiva
+                    $stmt_deactivate_single = $conn->prepare("UPDATE albums SET is_active = FALSE WHERE id = ? AND marco_id = ?");
+                    $stmt_deactivate_single->bind_param("ii", $album_id, $marco_id);
+                    $stmt_deactivate_single->execute();
+                }
+            }
+            
+            json_response(['success' => true]);
+        }
+        // DELETE: Eliminar un álbum
+        elseif ($request_method == 'DELETE' && $album_id !== null) {
+            // Obtener la URL de las fotos para borrarlas físicamente
+            $stmt = $conn->prepare("SELECT url FROM fotos WHERE album_id = ? AND marco_id = ?");
+            $stmt->bind_param("ii", $album_id, $marco_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $files_to_delete = [];
+            while ($row = $result->fetch_assoc()) {
+                $files_to_delete[] = $row['url'];
+            }
+            $stmt->close();
+
+            // Borrar el álbum de la base de datos (ON DELETE CASCADE en fotos se encargará de los registros de fotos)
+            $stmt_delete_album = $conn->prepare("DELETE FROM albums WHERE id = ? AND marco_id = ?");
+            $stmt_delete_album->bind_param("ii", $album_id, $marco_id);
+            
+            if ($stmt_delete_album->execute()) {
+                // Borrar archivos físicos
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+                $host = $_SERVER['HTTP_HOST'];
+                $deleted_count = 0;
+                $errors = [];
+
+                foreach ($files_to_delete as $url) {
+                    // Convertir la URL pública a una ruta de archivo local
+                    $file_path = str_replace($protocol . $host . $base_path . '/', '', $url);
+                    if (file_exists($file_path)) {
+                        if (@unlink($file_path)) {
+                            $deleted_count++;
+                        } else {
+                            $errors[] = "No se pudo borrar '{$file_path}'. Verifique los permisos.";
+                        }
+                    }
+                }
+                json_response(['success' => true, 'deleted_files_count' => $deleted_count, 'errors' => $errors]);
+            } else {
+                json_response(['error' => 'Error al eliminar el álbum.'], 500);
+            }
         }
         break;
 

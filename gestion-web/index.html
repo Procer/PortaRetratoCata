@@ -22,6 +22,7 @@
         <nav class="tabs">
             <button type="button" class="tab-button active" data-tab="cargar">Cargar Contenido</button>
             <button type="button" class="tab-button" data-tab="galeria">Galería</button>
+            <button type="button" class="tab-button" data-tab="albums">Álbumes</button>
             <button type="button" class="tab-button" data-tab="ajustes">Ajustes</button>
         </nav>
 
@@ -33,6 +34,12 @@
                 <section class="card">
                     <h2>Subir Video</h2>
                     <form id="upload-video-form">
+                        <div class="form-group">
+                            <label for="video-album-select">📂 Seleccionar Álbum</label>
+                            <select id="video-album-select" name="album_id" required>
+                                <option value="">Cargando álbumes...</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label for="video-file">📹 Archivo de Video</label>
                             <input type="file" id="video-file" name="video" accept="video/*" required>
@@ -50,6 +57,12 @@
 
                 <section class="card">
                     <h2>Subir Fotos</h2>
+                    <div class="form-group">
+                        <label for="photo-album-select">📂 Seleccionar Álbum</label>
+                        <select id="photo-album-select" name="album_id" required>
+                            <option value="">Cargando álbumes...</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label for="file_input">⬆️ Seleccionar o Arrastrar Fotos</label>
                         <p class="help-text">Puedes seleccionar múltiples imágenes a la vez.</p>
@@ -76,11 +89,33 @@
                         <div class="gallery-actions">
                             <button id="btn_refresh_gallery" class="btn-secondary" title="Refrescar la galería">Refrescar</button>
                             <button id="btn_import_server" class="btn-secondary" title="Importar desde la carpeta 'importar' del servidor">Importar</button>
-                            <button id="btn_delete_all_photos" class="btn-danger">Eliminar Todo</button>
                         </div>
                     </div>
                     <div id="photo-list-container">
                         <p class="help-text">Cargando...</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Contenido de la Pestaña: Álbumes -->
+            <div class="tab-content" id="tab-albums">
+                <p class="tab-explanation">Gestiona tus álbumes: crea nuevos, activa el que se mostrará en el portarretratos, o edita y elimina los existentes.</p>
+
+                <section class="card">
+                    <h2>Crear Nuevo Álbum</h2>
+                    <div class="form-group">
+                        <label for="new_album_name">🏷️ Nombre del Álbum</label>
+                        <input type="text" id="new_album_name" placeholder="Ej: Vacaciones 2024" required>
+                    </div>
+                    <div class="form-actions">
+                        <button id="btn_create_album">Crear Álbum</button>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h2>Tus Álbumes</h2>
+                    <div id="albums-list-container">
+                        <p class="help-text">Cargando álbumes...</p>
                     </div>
                 </section>
             </div>
