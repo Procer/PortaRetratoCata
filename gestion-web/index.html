@@ -81,17 +81,26 @@
 
             <!-- Contenido de la Pestaña: Galería -->
             <div class="tab-content" id="tab-galeria">
-                <p class="tab-explanation">Visualiza y gestiona todo el contenido que has subido. Desde aquí puedes eliminar archivos individualmente o limpiar la galería por completo.</p>
+                <p class="tab-explanation">Visualiza y gestiona tu contenido. Navega por los álbumes para ver las fotos y vídeos, o para eliminar archivos.</p>
 
                 <section class="card">
                     <div class="gallery-header">
-                        <h2>Contenido Subido</h2>
+                        <h2 id="gallery-view-title">Álbumes</h2>
                         <div class="gallery-actions">
-                            <button id="btn_refresh_gallery" class="btn-secondary" title="Refrescar la galería">Refrescar</button>
-                            <button id="btn_import_server" class="btn-secondary" title="Importar desde la carpeta 'importar' del servidor">Importar</button>
+                            <button id="btn-back-to-albums" class="btn-secondary" style="display: none;">← Volver a Álbumes</button>
+                            <button id="btn_refresh_gallery" class="btn-secondary" title="Refrescar">Refrescar</button>
+                            <div class="import-controls">
+                                <select id="import-album-select" required>
+                                    <option value="">Elegir álbum para importar</option>
+                                </select>
+                                <button id="btn_import_server" class="btn-secondary" title="Importar desde la carpeta 'importar' del servidor">Importar</button>
+                            </div>
                         </div>
                     </div>
-                    <div id="photo-list-container">
+                    <div id="album-list-container" class="photo-list-container" style="display: grid;">
+                         <p class="help-text">Cargando...</p>
+                    </div>
+                    <div id="photo-list-container" style="display: none;">
                         <p class="help-text">Cargando...</p>
                     </div>
                 </section>

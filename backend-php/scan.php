@@ -17,6 +17,16 @@ try {
     exit;
 }
 
+// --- Obtener el ID del álbum desde el cuerpo de la petición ---
+$data = json_decode(file_get_contents('php://input'), true);
+$album_id = isset($data['album_id']) ? (int)$data['album_id'] : null;
+
+// Validar que se haya proporcionado un ID de álbum.
+if (!$album_id) {
+    json_response(['success' => false, 'error' => 'No se proporcionó un ID de álbum válido para la importación.'], 400);
+    exit;
+}
+
 
 // --- DEBUGGING BLOCK ---
 $import_dir = __DIR__ . '/importar/';
@@ -96,11 +106,11 @@ foreach ($files_to_scan as $file) {
     // La URL que se guarda en la DB debe ser relativa a la raíz del backend para ser accesible.
     $public_url = 'public/contents/frame_' . $marco_id . '/' . $new_filename;
 
-    if (rename($original_path, $target_path_on_disk)) {
+    if (@rename($original_path, $target_path_on_disk)) {
         // El archivo se movió con éxito, ahora lo insertamos en la base de datos.
-        $stmt = $conn->prepare("INSERT INTO fotos (marco_id, url, media_type) VALUES (?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO fotos (marco_id, url, media_type, album_id) VALUES (?, ?, ?, ?)");
         if ($stmt) {
-            $stmt->bind_param("iss", $marco_id, $public_url, $media_type);
+            $stmt->bind_param("issi", $marco_id, $public_url, $media_type, $album_id);
             if ($stmt->execute()) {
                 $imported_files[] = $file;
             } else {

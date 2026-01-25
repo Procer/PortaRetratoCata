@@ -65,6 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const albumsListContainer = document.getElementById('albums-list-container');
     const photoAlbumSelect = document.getElementById('photo-album-select');
     const videoAlbumSelect = document.getElementById('video-album-select');
+    const albumListContainer = document.getElementById('album-list-container');
+    const galleryViewTitle = document.getElementById('gallery-view-title');
+    const btnBackToAlbums = document.getElementById('btn-back-to-albums');
+    const importAlbumSelect = document.getElementById('import-album-select');
 
 
     // --- Función para mostrar mensajes de feedback ---
@@ -72,6 +76,59 @@ document.addEventListener('DOMContentLoaded', () => {
         feedbackMessage.textContent = message;
         feedbackMessage.className = 'feedback show ' + (isError ? 'error' : 'success');
         setTimeout(() => { feedbackMessage.classList.remove('show'); }, 3000);
+    };
+
+    // --- Funciones de Galería ---
+    let selectedAlbumId = null;
+
+    const switchToAlbumView = () => {
+        galleryViewTitle.textContent = 'Álbumes';
+        albumListContainer.style.display = 'grid';
+        photoListContainer.style.display = 'none';
+        btnBackToAlbums.style.display = 'none';
+        
+        // Mostrar controles de importación solo en la vista de álbumes
+        const importControls = document.querySelector('.import-controls');
+        if (importControls) importControls.style.display = 'flex';
+
+        selectedAlbumId = null;
+        // Limpiar fotos para que no se muestren al volver a entrar a un álbum
+        photoListContainer.innerHTML = '<p class="help-text">Cargando...</p>';
+    };
+
+    const switchToPhotoView = (albumId, albumName) => {
+        galleryViewTitle.textContent = `Álbum: ${albumName}`;
+        albumListContainer.style.display = 'none';
+        photoListContainer.style.display = 'grid';
+        btnBackToAlbums.style.display = 'inline-block';
+        
+        // Ocultar controles de importación en la vista de fotos
+        const importControls = document.querySelector('.import-controls');
+        if (importControls) importControls.style.display = 'none';
+
+        selectedAlbumId = albumId;
+        fetchPhotos(albumId);
+    };
+    
+    const renderGalleryAlbums = () => {
+        albumListContainer.innerHTML = '';
+        if (currentAlbums.length === 0) {
+            albumListContainer.innerHTML = '<p class="help-text">No hay álbumes creados. ¡Crea uno en la pestaña "Álbumes"!</p>';
+            return;
+        }
+
+        currentAlbums.forEach(album => {
+            const albumItem = document.createElement('div');
+            albumItem.className = 'photo-item album-gallery-item'; // Re-use photo-item for grid layout
+            albumItem.dataset.albumId = album.id;
+            albumItem.dataset.albumName = album.name;
+            
+            albumItem.innerHTML = `
+                <div class="album-gallery-icon">📂</div>
+                <div class="album-gallery-name">${album.name}</div>
+            `;
+            albumListContainer.appendChild(albumItem);
+        });
     };
 
     // --- Funciones de Gestión de Álbumes ---
@@ -85,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAlbums = await response.json();
             renderAlbums();
             populateAlbumSelects();
+            populateImportAlbumSelect(); // <-- Nueva llamada
         } catch (error) {
             console.error('Error al obtener álbumes:', error);
             albumsListContainer.innerHTML = `<p class="help-text error">Error al cargar álbumes: ${error.message}</p>`;
@@ -147,6 +205,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const populateImportAlbumSelect = () => {
+        if (!importAlbumSelect) return;
+
+        importAlbumSelect.innerHTML = '<option value="">-- Elegir Álbum --</option>';
+
+        currentAlbums.forEach(album => {
+            const option = document.createElement('option');
+            option.value = album.id;
+            option.textContent = album.name;
+            importAlbumSelect.appendChild(option);
+        });
+    };
+
     const createAlbum = async () => {
         const name = newAlbumNameInput.value.trim();
         if (!name) {
@@ -181,7 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(data.error || 'Error desconocido al activar el álbum.');
             showFeedback('¡Álbum activado con éxito!');
             fetchAlbums(); // Refrescar la lista de álbumes y la galería
-            fetchPhotos(); // Refrescar la galería para mostrar el nuevo álbum activo
+            if (selectedAlbumId) {
+                fetchPhotos(selectedAlbumId);
+            }
         } catch (error) {
             showFeedback(`Error al activar álbum: ${error.message}`, true);
         }
@@ -216,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(data.error || 'Error desconocido al eliminar el álbum.');
             showFeedback('¡Álbum y su contenido eliminados con éxito!');
             fetchAlbums(); // Refrescar la lista de álbumes
-            fetchPhotos(); // Refrescar la galería
+            switchToAlbumView(); // Volver a la vista de álbumes
         } catch (error) {
             showFeedback(`Error al eliminar álbum: ${error.message}`, true);
         }
@@ -261,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = JSON.parse(xhr.responseText);
                     if (response.success) {
                         showFeedback('¡Video subido con éxito!', false);
-                        fetchPhotos(); // Refrescar la galería
+                        if (selectedAlbumId) fetchPhotos(selectedAlbumId);
                     } else {
                         throw new Error(response.error || 'Error desconocido en el servidor.');
                     }
@@ -359,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         showFeedback(`¡Proceso de subida de fotos completado!`, false);
-        fetchPhotos(); // Refrescar la galería
+        if (selectedAlbumId) fetchPhotos(selectedAlbumId); // Refrescar
 
         // Ocultar la barra de progreso después de un par de segundos
         setTimeout(() => {
@@ -405,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderPhotos = (media) => {
         photoListContainer.innerHTML = '';
         if (media.length === 0) {
-            photoListContainer.innerHTML = '<p class="help-text">No hay imágenes ni vídeos subidos.</p>';
+            photoListContainer.innerHTML = '<p class="help-text">No hay imágenes ni vídeos en este álbum.</p>';
             return;
         }
 
@@ -443,6 +516,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchPhotos = (albumId = null) => { // albumId ahora es un parámetro opcional
+        if (!albumId) {
+            // Si no hay albumId, no hacemos nada en la galería.
+            photoListContainer.innerHTML = '<p class="help-text">Selecciona un álbum para ver su contenido.</p>';
+            return;
+        }
         photoListContainer.innerHTML = '<p class="help-text">Cargando imágenes...</p>';
         let url = `${API_BASE_URL}/photos`;
         if (albumId) {
@@ -466,7 +544,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (!data.success) throw new Error(data.error || 'Error desconocido');
             showFeedback('¡Elemento eliminado con éxito!');
-            fetchPhotos(); // Refrescar la galería después de eliminar
+            if (selectedAlbumId) {
+                fetchPhotos(selectedAlbumId); // Refrescar solo el álbum actual
+            }
         })
         .catch(error => showFeedback(error.message, true));
     };
@@ -589,40 +669,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    btnRefreshGallery.addEventListener('click', fetchPhotos);
+    btnRefreshGallery.addEventListener('click', () => {
+        if (selectedAlbumId) {
+            fetchPhotos(selectedAlbumId);
+        } else {
+            fetchAlbums().then(renderGalleryAlbums);
+        }
+    });
+
+    btnBackToAlbums.addEventListener('click', switchToAlbumView);
+
+    albumListContainer.addEventListener('click', (event) => {
+        const albumItem = event.target.closest('.album-gallery-item');
+        if (albumItem) {
+            const albumId = albumItem.dataset.albumId;
+            const albumName = albumItem.dataset.albumName;
+            switchToPhotoView(albumId, albumName);
+        }
+    });
 
     const btnImportServer = document.getElementById('btn_import_server');
     btnImportServer.addEventListener('click', () => {
+        const albumId = importAlbumSelect.value;
+        if (!albumId) {
+            showFeedback('Por favor, selecciona un álbum para la importación.', true);
+            return;
+        }
+
         const originalButtonText = btnImportServer.textContent;
         btnImportServer.textContent = 'Importando...';
         btnImportServer.disabled = true;
+        importAlbumSelect.disabled = true;
 
         showFeedback('Iniciando proceso de importación en el servidor...', false);
 
         fetch(`${API_BASE_URL}/scan.php`, {
-            method: 'POST', // Usamos POST para que se ejecute la lógica
-            headers: { 'X-Api-Token': API_TOKEN }
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Api-Token': API_TOKEN },
+            body: JSON.stringify({ album_id: albumId })
         })
         .then(response => {
-            // Si la respuesta no es OK (ej. un error 500), la procesamos como un error.
-            if (!response.ok) {
-                return response.json().then(errorData => {
-                    // Rechazamos la promesa para que caiga en el .catch, pasando los datos del error.
-                    return Promise.reject(errorData);
-                });
-            }
-            return response.json();
+            // Siempre leemos la respuesta como texto primero para poder depurar errores de PHP
+            return response.text().then(text => {
+                try {
+                    // Intentamos parsear la respuesta como JSON
+                    const data = JSON.parse(text);
+                    // Si el servidor devolvió un código de error (ej. 4xx, 5xx) pero con un cuerpo JSON, lo tratamos como error
+                    if (!response.ok) {
+                        return Promise.reject(data);
+                    }
+                    // Si todo está bien, devolvemos los datos JSON
+                    return data;
+                } catch (e) {
+                    // Si el parseo JSON falla, significa que la respuesta es HTML (un error de PHP)
+                    // Rechazamos la promesa con un objeto de error que contiene el HTML para depuración
+                    return Promise.reject({ 
+                        error: 'El servidor devolvió una respuesta inesperada.', 
+                        details: text 
+                    });
+                }
+            });
         })
         .then(data => {
+            // Este bloque solo se ejecuta si la respuesta fue un JSON válido y la petición fue exitosa
             if (!data.success) {
-                // Esto manejaría errores lógicos donde la respuesta es 200 OK pero success=false
-                throw new Error(data.error || 'Ocurrió un error desconocido durante la importación.');
+                // Maneja errores lógicos del backend, ej: { success: false, error: "Mensaje" }
+                return Promise.reject(data);
             }
             
             let message = data.message;
             if (data.imported_count > 0) {
                 message = `¡Se importaron ${data.imported_count} nuevos archivos!`;
-                fetchPhotos(); // Refrescar la galería para ver los nuevos archivos
+                fetchAlbums().then(renderGalleryAlbums);
             } else {
                 message = 'No se encontraron nuevos archivos para importar.';
             }
@@ -635,15 +753,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 showFeedback(message, false);
             }
         })
-        .catch(errorData => {
-            // errorData ahora es el objeto JSON que enviamos desde el backend
-            console.error("Error detallado del servidor:", errorData);
-            const errorMessage = errorData.error || 'Error crítico. Revisa la consola.';
+        .catch(errorInfo => {
+            // Este bloque captura cualquier rechazo de la cadena de promesas
+            console.error("Error detallado del servidor:", errorInfo);
+            
+            let errorMessage = 'Error crítico. Revisa la consola.';
+            if (errorInfo && errorInfo.error) {
+                errorMessage = errorInfo.error;
+            }
+            
+            if (errorInfo && errorInfo.details) {
+                // Muestra el error de PHP en la consola para una depuración más fácil
+                console.error("Detalles de la respuesta del servidor (posible error de PHP):", errorInfo.details);
+            }
+
             showFeedback(errorMessage, true);
         })
         .finally(() => {
             btnImportServer.textContent = originalButtonText;
             btnImportServer.disabled = false;
+            importAlbumSelect.disabled = false;
         });
     });
 
@@ -724,16 +853,16 @@ document.addEventListener('DOMContentLoaded', () => {
             contentToShow.classList.add('active');
         }
 
-        // Si la pestaña de álbumes o galería es activada, refrescar la lista
+        // Lógica específica al cambiar de pestaña
         if (tabId === 'albums') {
             fetchAlbums();
         } else if (tabId === 'galeria') {
-            fetchPhotos();
+            switchToAlbumView();
+            fetchAlbums().then(renderGalleryAlbums);
         }
     });
 
     // --- Carga Inicial de Datos ---
     fetchConfig();
-    fetchPhotos(); // Cargar las fotos del álbum activo al inicio
     fetchAlbums(); // Cargar los álbumes al inicio, para poblar los selects
 });
