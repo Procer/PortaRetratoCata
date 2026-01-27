@@ -56,15 +56,24 @@ html, body {
     
     opacity: 0; /* Empieza invisible hasta que carguen los datos */
     transition: opacity 0.5s ease-in-out;
+
+    /* Variable para el tamaño del icono del clima principal */
+    --weather-icon-size: 72px; /* Tamaño por defecto */
 }
 
 #weather-container.loaded {
     opacity: 1;
 }
 
+.weather-icon img, .forecast-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Asegura que el ícono se ajuste sin ser cortado */
+}
+
 .weather-icon {
-    width: 72px;
-    height: 72px;
+    width: var(--weather-icon-size);
+    height: var(--weather-icon-size);
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); /* Sombra suave para el icono */
 }
 
@@ -150,7 +159,7 @@ html, body {
 }
 
 
-/* --- Estilos para el Pron�stico --- */
+/* --- Estilos para el Pronóstico --- */
 
 .forecast-hourly-container {
     display: flex;
@@ -175,8 +184,9 @@ html, body {
 }
 
 .forecast-icon {
-    width: 40px;
-    height: 40px;
+    /* Usar un tamaño más pequeño para los íconos de pronóstico por hora por defecto, pero escalable */
+    width: calc(var(--weather-icon-size) * 0.5); /* 50% del tamaño principal */
+    height: calc(var(--weather-icon-size) * 0.5);
 }
 
 .forecast-icon svg {
@@ -204,8 +214,9 @@ html, body {
 }
 
 .forecast-daily-container .forecast-icon {
-    width: 80px; /* Tama�o m�s grande para la vista diaria */
-    height: 80px;
+    /* Usar un tamaño ligeramente más grande para el pronóstico diario por defecto, pero escalable */
+    width: calc(var(--weather-icon-size) * 1.1); /* 110% del tamaño principal */
+    height: calc(var(--weather-icon-size) * 1.1);
     margin: 5px 0;
 }
 
@@ -232,3 +243,51 @@ html, body {
     color: rgba(255, 255, 255, 0.9);
 }
 
+/* --- Estilos para el Pronóstico Extendido --- */
+.forecast-extended-container {
+    display: flex;
+    justify-content: space-around; /* Distribuye el espacio uniformemente entre los elementos */
+    align-items: center;
+    width: 100%;
+    /* No hay un gap fijo aquí, cada item tendrá su padding */
+    padding: 5px 0; /* Un poco de padding arriba/abajo */
+}
+
+.forecast-item-extended {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px 10px; /* Padding para separar cada día */
+    text-align: center;
+}
+
+.forecast-day-name-extended {
+    font-size: 0.85em; /* Un poco más pequeño que el principal */
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 5px;
+}
+
+.forecast-icon-extended {
+    width: calc(var(--weather-icon-size) * 0.7); /* Iconos un poco más grandes que los horarios, más pequeños que el principal */
+    height: calc(var(--weather-icon-size) * 0.7);
+    margin-bottom: 5px;
+}
+
+.forecast-icon-extended img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.forecast-temp-extended {
+    font-size: 0.9em; /* Temperaturas más pequeñas */
+    font-weight: 600;
+    display: flex;
+    gap: 5px; /* Pequeño espacio entre max y min */
+}
+
+.forecast-temp-extended .temp-min {
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.7);
+}

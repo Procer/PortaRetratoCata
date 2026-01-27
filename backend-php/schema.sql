@@ -20,6 +20,7 @@ CREATE TABLE `configuracion_marcos` (
   `forecast_morning_end` TIME DEFAULT NULL,
   `forecast_evening_start` TIME DEFAULT NULL,
   `forecast_evening_end` TIME DEFAULT NULL,
+  `weather_icon_size_px` INT NOT NULL DEFAULT 72, -- Nuevo campo para el tamaño del ícono del clima
   FOREIGN KEY (`marco_id`) REFERENCES `marcos`(`id`) ON DELETE CASCADE
 );
 

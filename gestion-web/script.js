@@ -36,10 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const weatherCityInput = document.getElementById('weather_city');
     const weatherApiKeyInput = document.getElementById('weather_api_key');
     const weatherFontSizeInput = document.getElementById('weather_font_size');
-    const morningStartInput = document.getElementById('forecast_morning_start');
-    const morningEndInput = document.getElementById('forecast_morning_end');
-    const eveningStartInput = document.getElementById('forecast_evening_start');
-    const eveningEndInput = document.getElementById('forecast_evening_end');
+    const weatherIconSizeInput = document.getElementById('weather_icon_size'); // New DOM element
+    const weatherToggleIntervalInput = document.getElementById('weather_toggle_interval'); // New DOM element for weather toggle
     const btnGuardarConfig = document.getElementById('btn_guardar_config');
     const btnSubirFoto = document.getElementById('btn_subir_foto');
     const fileInput = document.getElementById('file_input');
@@ -119,13 +117,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentAlbums.forEach(album => {
             const albumItem = document.createElement('div');
-            albumItem.className = 'photo-item album-gallery-item'; // Re-use photo-item for grid layout
+            albumItem.className = 'album-card';
             albumItem.dataset.albumId = album.id;
             albumItem.dataset.albumName = album.name;
             
+            let previewImagesHtml = '';
+            if (album.previews && album.previews.length > 0) {
+                const numPreviews = album.previews.length;
+                previewImagesHtml = album.previews.map(preview => `
+                    <div class="album-preview-item" style="background-image: url('${preview.url}');">
+                        ${preview.media_type === 'video' ? '<span class="video-indicator-sm">▶</span>' : ''}
+                    </div>
+                `).join('');
+            } else {
+                previewImagesHtml = `
+                    <div class="album-preview-item no-content"></div>
+                    <div class="album-preview-item no-content"></div>
+                    <div class="album-preview-item no-content"></div>
+                    <div class="album-preview-item no-content"></div>
+                `;
+            }
+
             albumItem.innerHTML = `
-                <div class="album-gallery-icon">📂</div>
-                <div class="album-gallery-name">${album.name}</div>
+                <div class="album-preview-grid album-preview-grid-${album.previews.length > 0 ? album.previews.length : 1}">
+                    ${previewImagesHtml}
+                </div>
+                <div class="album-card-overlay">
+                    <h3 class="album-card-name">${album.name}</h3>
+                    <span class="album-card-count">${album.media_count} elementos</span>
+                </div>
             `;
             albumListContainer.appendChild(albumItem);
         });
@@ -568,11 +588,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.weather_city) weatherCityInput.value = data.weather_city;
                 if (data.weather_api_key) weatherApiKeyInput.value = data.weather_api_key;
                 if (data.weather_font_size_px) weatherFontSizeInput.value = data.weather_font_size_px;
-                // Cargar valores de los nuevos campos de tiempo. Si son null, se asigna un string vacío.
-                if (morningStartInput) morningStartInput.value = data.forecast_morning_start || '';
-                if (morningEndInput) morningEndInput.value = data.forecast_morning_end || '';
-                if (eveningStartInput) eveningStartInput.value = data.forecast_evening_start || '';
-                if (eveningEndInput) eveningEndInput.value = data.forecast_evening_end || '';
+                if (data.weather_icon_size_px) weatherIconSizeInput.value = data.weather_icon_size_px; // Populate new input
+                if (data.weather_toggle_interval_sec !== undefined) weatherToggleIntervalInput.value = data.weather_toggle_interval_sec; // Populate new input
             })
             .catch(error => console.error('Error al cargar la configuración:', error));
     };
@@ -586,10 +603,8 @@ document.addEventListener('DOMContentLoaded', () => {
             weather_city: weatherCityInput.value.trim(),
             weather_api_key: weatherApiKeyInput.value.trim(),
             weather_font_size_px: parseInt(weatherFontSizeInput.value, 10),
-            forecast_morning_start: morningStartInput.value,
-            forecast_morning_end: morningEndInput.value,
-            forecast_evening_start: eveningStartInput.value,
-            forecast_evening_end: eveningEndInput.value
+            weather_icon_size_px: parseInt(weatherIconSizeInput.value, 10), // Send new value
+            weather_toggle_interval_sec: parseInt(weatherToggleIntervalInput.value, 10) // Send new value
         };
 
         // Fusionar la configuración actual con los nuevos valores
@@ -599,6 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (payload.tiempo_transicion_seg < 1) return showFeedback('El tiempo debe ser de al menos 1 segundo.', true);
         if (payload.font_size_px < 8 || payload.font_size_px > 100) return showFeedback('El tamaño de la fuente del reloj debe estar entre 8 y 100.', true);
         if (payload.weather_font_size_px < 8 || payload.weather_font_size_px > 100) return showFeedback('El tamaño de la fuente del clima debe estar entre 8 y 100.', true);
+        if (payload.weather_icon_size_px < 24 || payload.weather_icon_size_px > 200) return showFeedback('El tamaño del ícono del clima debe estar entre 24 y 200.', true);
         if (payload.weather_city && !payload.weather_api_key) {
             return showFeedback('Si especificas una ciudad, también debes proporcionar una API Key.', true);
         }

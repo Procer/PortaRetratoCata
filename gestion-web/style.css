@@ -489,36 +489,128 @@ select {
     opacity: 1;
 }
 
-/* Estilos específicos para ítems de álbum en la galería */
-.album-gallery-item {
+/* --- Estilos para las nuevas Tarjetas de Álbum en la Galería --- */
+.album-card {
+    position: relative;
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    aspect-ratio: 1 / 1; /* Mantiene una relación de aspecto cuadrada */
+    transition: all 0.2s ease;
+    background-color: var(--color-background-medium); /* Fondo si no hay previews */
     cursor: pointer;
-    display: flex;
+    display: flex; /* Para centrar el contenido si no hay previews */
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.album-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: var(--shadow-md);
+}
+
+.album-preview-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    gap: 1px; /* Pequeña separación entre las imágenes del mosaico */
+    background-color: var(--color-border-light); /* Color de separación */
+}
+
+/* Diseños de cuadrícula según el número de imágenes */
+.album-preview-grid-1 {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+}
+.album-preview-grid-2 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+}
+.album-preview-grid-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+.album-preview-grid-3 .album-preview-item:first-child {
+    grid-row: span 2;
+}
+.album-preview-grid-4 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+.album-preview-item {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 15px;
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border-light);
-    text-align: center;
-    transition: all 0.2s ease;
+    color: var(--color-text-light);
+    font-size: 0.8rem;
+    position: relative;
 }
-.album-gallery-item:hover {
+
+.album-preview-item.no-content {
     background-color: var(--color-background-medium);
+    border: 1px dashed var(--color-border-medium);
+    color: var(--color-text-secondary);
+}
+.album-preview-item.no-content::before {
+    content: ' Vacío ';
+    font-size: 0.9em;
 }
 
-.album-gallery-icon {
-    font-size: 3.5rem;
+.video-indicator-sm {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 0.8rem;
     line-height: 1;
-    color: var(--color-primary-light);
-    margin-bottom: 5px;
 }
 
-.album-gallery-name {
-    margin-top: 5px;
+.album-card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px 15px;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+    color: white;
+    text-align: left;
+    transition: background 0.2s ease;
+}
+
+.album-card:hover .album-card-overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 100%);
+}
+
+.album-card-overlay .album-card-name {
+    margin: 0;
+    font-size: 1.1rem;
     font-weight: 600;
-    color: var(--color-text-primary);
-    font-size: 1rem;
-    word-break: break-word; /* Para nombres largos */
+    line-height: 1.2;
+    word-break: break-word;
+    color: white; /* Asegura que el texto del nombre del álbum sea blanco */
+}
+
+.album-card-count {
+    display: inline-block;
+    background-color: var(--color-primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    margin-top: 5px;
+    font-weight: 500;
 }
 
 /* --- Mensaje de Feedback (Toasts) --- */
@@ -664,6 +756,18 @@ select {
     padding: 8px 10px;
     font-size: 0.85rem;
     border-radius: var(--border-radius-sm);
+}
+
+.forecast-schedule-group {
+    margin-top: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px dashed var(--color-border-light);
+}
+
+.forecast-schedule-group:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 /* --- Responsividad --- */

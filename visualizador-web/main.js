@@ -16,11 +16,10 @@ let transitionTime = 10;
 let clockFontSize = 16;
 let weatherCity = '';
 let weatherFontSize = 16;
-let forecastMorningStart = null;
-let forecastMorningEnd = null;
-let forecastEveningStart = null;
-let forecastEveningEnd = null;
-
+let weatherIconSize = 72; // Default size for weather icons
+let weatherToggleInterval = 0; // New: Intervalo de alternancia del clima en segundos
+let currentWeatherMode = 'extended'; // New: Modo actual de visualización del clima ('hourly' o 'extended')
+let weatherToggleTimerId = null; // New: ID del timer para la alternancia
 let currentMediaIndex = 0;
 let slideshowTimerId = null;
 let isSyncing = false;
@@ -192,23 +191,26 @@ async function renderForecast(type) {
                 `;
             });
             forecastHTML += `</div>`;
-        } else if (type === 'night' && data.daily && data.daily.length > 0) {
-            // Pronóstico para el día siguiente
-            const tomorrow = data.daily[0];
-            const iconHtml = `<img src="https:${tomorrow.icon}" alt="${tomorrow.description}" class="weather-icon-img">`;
-            forecastHTML = `
-                <div class="forecast-daily-container">
-                    <div class="forecast-day-name">Mañana: ${tomorrow.day_name}</div>
-                    <div class="forecast-icon">${iconHtml}</div>
-                    <div class="forecast-daily-temp">
-                        <span class="temp-max">Max: ${tomorrow.temp_max}°</span>
-                        <span class="temp-min">Min: ${tomorrow.temp_min}°</span>
+        } else if (type === 'extended' && data.daily && data.daily.length > 0) { // Nuevo tipo para pronóstico extendido
+            // Pronóstico extendido para los próximos días (ej: 3 días)
+            forecastHTML = `<div class="forecast-extended-container">`;
+            data.daily.slice(0, 3).forEach(day => { // Mostrar los próximos 3 días
+                const iconHtml = `<img src="https:${day.icon}" alt="${day.description}" class="forecast-icon-img">`;
+                forecastHTML += `
+                    <div class="forecast-item-extended">
+                        <div class="forecast-day-name-extended">${day.day_name}</div>
+                        <div class="forecast-icon-extended">${iconHtml}</div>
+                        <div class="forecast-temp-extended">
+                            <span class="temp-max">${day.temp_max}°</span>
+                            <span class="temp-min">${day.temp_min}°</span>
+                        </div>
                     </div>
-                    <div class="forecast-desc">${tomorrow.description}</div>
-                </div>
-            `;
-        } else {
-            // Si no hay datos, mostrar clima actual como fallback
+                `;
+            });
+            forecastHTML += `</div>`;
+        }
+         else {
+            // Si no hay datos para el tipo solicitado, o fallback
             return renderCurrentWeather();
         }
 
@@ -222,29 +224,36 @@ async function renderForecast(type) {
     }
 }
 
-function updateWeatherDisplay() {
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-
-    const parseTime = (timeStr) => {
-        if (!timeStr) return null;
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        return hours * 60 + minutes;
-    };
-
-    const morningStart = parseTime(forecastMorningStart);
-    const morningEnd = parseTime(forecastMorningEnd);
-    const eveningStart = parseTime(forecastEveningStart);
-    const eveningEnd = parseTime(forecastEveningEnd);
-
-    if (morningStart !== null && morningEnd !== null && currentTime >= morningStart && currentTime <= morningEnd) {
-        renderForecast('day');
-    } else if (eveningStart !== null && eveningEnd !== null && currentTime >= eveningStart && currentTime <= eveningEnd) {
-        renderForecast('night');
-    } else {
-        renderCurrentWeather();
+// --- Lógica de Alternancia del Clima ---
+function startWeatherToggleLogic() {
+    // Limpiar cualquier temporizador de alternancia existente
+    if (weatherToggleTimerId) {
+        clearInterval(weatherToggleTimerId);
+        weatherToggleTimerId = null;
     }
+
+    // Si el intervalo de alternancia es 0 o menos, simplemente mostrar el pronóstico extendido por defecto.
+    if (weatherToggleInterval <= 0) {
+        currentWeatherMode = 'extended'; // Asegurarse de que el modo inicial sea extendido
+        renderForecast('extended'); // Mostrar el pronóstico extendido por defecto
+        return;
+    }
+
+    // Si el intervalo es > 0, iniciar la alternancia.
+    currentWeatherMode = 'extended'; // Empezar con el extendido
+    renderForecast('extended'); // Mostrarlo inmediatamente
+
+    weatherToggleTimerId = setInterval(() => {
+        if (currentWeatherMode === 'extended') {
+            currentWeatherMode = 'day'; // 'day' significa pronóstico horario
+            renderForecast('day');
+        } else {
+            currentWeatherMode = 'extended';
+            renderForecast('extended');
+        }
+    }, weatherToggleInterval * 1000); // Convertir segundos a milisegundos
 }
+
 
 
 // --- Lógica de Sincronización con el Backend ---
@@ -267,25 +276,28 @@ async function syncWithBackend() {
             }
             clockFontSize = parseInt(config.font_size_px, 10) || 16;
             
-            if (weatherFontSize !== (parseInt(config.weather_font_size_px, 10) || 16) || weatherCity !== (config.weather_city || '')) {
+            if (
+                weatherFontSize !== (parseInt(config.weather_font_size_px, 10) || 16) ||
+                weatherCity !== (config.weather_city || '') ||
+                weatherIconSize !== (parseInt(config.weather_icon_size_px, 10) || 72) // Check if icon size changed
+            ) {
                 weatherConfigChanged = true;
             }
             weatherFontSize = parseInt(config.weather_font_size_px, 10) || 16;
             weatherCity = config.weather_city || '';
+            weatherIconSize = parseInt(config.weather_icon_size_px, 10) || 72; // Update icon size
             
-            if (forecastMorningStart !== config.forecast_morning_start || forecastMorningEnd !== config.forecast_morning_end || forecastEveningStart !== config.forecast_evening_start || forecastEveningEnd !== config.forecast_evening_end) {
-                weatherConfigChanged = true;
-            }
-            forecastMorningStart = config.forecast_morning_start;
-            forecastMorningEnd = config.forecast_morning_end;
-            forecastEveningStart = config.forecast_evening_start;
-            forecastEveningEnd = config.forecast_evening_end;
+            weatherToggleInterval = parseInt(config.weather_toggle_interval_sec, 10) || 0; // Update new config
 
             if (dateTimeContainer) dateTimeContainer.style.fontSize = `${clockFontSize}px`;
-            if (weatherContainer) weatherContainer.style.fontSize = `${weatherFontSize}px`;
+            if (weatherContainer) {
+                weatherContainer.style.fontSize = `${weatherFontSize}px`;
+                weatherContainer.style.setProperty('--weather-icon-size', `${weatherIconSize}px`); // Apply icon size
+            }
             
-            if (weatherConfigChanged) {
-                updateWeatherDisplay();
+            // Si la configuración del clima cambia, reiniciar la lógica de alternancia
+            if (weatherConfigChanged || weatherToggleInterval !== (config.weather_toggle_interval_sec || 0)) { // Also check if toggle interval changed
+                startWeatherToggleLogic();
             }
 
         } else {
@@ -321,10 +333,11 @@ function startApp() {
         if (!slideshowTimerId && mediaItems.length > 0) {
             showNextMedia();
         }
-        // La primera llamada al clima se hace dentro de syncWithBackend si la configuración cambia
-        // o a través del intervalo regular.
+        // La lógica de alternancia del clima se gestiona ahora por startWeatherToggleLogic.
+        // syncWithBackend se encarga de actualizar la configuración y llamar a startWeatherToggleLogic si es necesario.
         setInterval(syncWithBackend, 30000); 
-        setInterval(updateWeatherDisplay, 30 * 60 * 1000); // Actualiza el clima/pronóstico cada 30 mins
+        // Eliminamos la llamada directa a updateWeatherDisplay, ya que startWeatherToggleLogic la gestiona.
+        startWeatherToggleLogic(); // Llamada inicial para establecer el modo del clima
     });
 }
 

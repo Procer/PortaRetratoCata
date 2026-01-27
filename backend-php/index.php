@@ -41,7 +41,7 @@ switch ($route) {
     // --- Endpoint de Configuración ---
     case '/config':
         if ($request_method == 'GET') {
-            $stmt = $conn->prepare("SELECT tiempo_transicion_seg, efecto_transicion, font_size_px, weather_city, weather_api_key, weather_font_size_px, forecast_morning_start, forecast_morning_end, forecast_evening_start, forecast_evening_end FROM configuracion_marcos WHERE marco_id = ?");
+            $stmt = $conn->prepare("SELECT tiempo_transicion_seg, efecto_transicion, font_size_px, weather_city, weather_api_key, weather_font_size_px, weather_icon_size_px, weather_toggle_interval_sec FROM configuracion_marcos WHERE marco_id = ?");
             $stmt->bind_param("i", $marco_id);
             $stmt->execute();
             $result = $stmt->get_result()->fetch_assoc();
@@ -53,10 +53,8 @@ switch ($route) {
                 'weather_city' => '',
                 'weather_api_key' => '',
                 'weather_font_size_px' => 16,
-                'forecast_morning_start' => null,
-                'forecast_morning_end' => null,
-                'forecast_evening_start' => null,
-                'forecast_evening_end' => null
+                'weather_icon_size_px' => 72, // Default value for the new field
+                'weather_toggle_interval_sec' => 0 // Default value for the new field
             ];
             json_response($result ? array_merge($defaults, $result) : $defaults);
 
@@ -70,53 +68,81 @@ switch ($route) {
             $weatherCity = $data['weather_city'] ?? '';
             $weatherApiKey = $data['weather_api_key'] ?? '';
             $weatherFontSize = intval($data['weather_font_size_px'] ?? 16);
+            $weatherIconSize = intval($data['weather_icon_size_px'] ?? 72); // New field for icon size
 
-            // Nuevos campos de pronóstico. Usar null si está vacío o no está definido.
-            $morningStart = !empty($data['forecast_morning_start']) ? $data['forecast_morning_start'] : null;
-            $morningEnd = !empty($data['forecast_morning_end']) ? $data['forecast_morning_end'] : null;
-            $eveningStart = !empty($data['forecast_evening_start']) ? $data['forecast_evening_start'] : null;
-            $eveningEnd = !empty($data['forecast_evening_end']) ? $data['forecast_evening_end'] : null;
+                        $weatherToggleInterval = intval($data['weather_toggle_interval_sec'] ?? 0); // New field
 
-            $stmt = $conn->prepare("UPDATE configuracion_marcos SET 
-                tiempo_transicion_seg = ?, 
-                efecto_transicion = ?, 
-                font_size_px = ?,
-                weather_city = ?,
-                weather_api_key = ?,
-                weather_font_size_px = ?,
-                forecast_morning_start = ?,
-                forecast_morning_end = ?,
-                forecast_evening_start = ?,
-                forecast_evening_end = ?
-                WHERE marco_id = ?");
-
-            if ($stmt === false) {
-                // Si la preparación falla, es muy probable que las columnas no existan en la DB.
-                json_response(['error' => 'Error en la consulta a la base de datos. ¿Has ejecutado el comando ALTER TABLE para añadir las nuevas columnas de pronóstico?'], 500);
-                exit;
-            }
-
-            $stmt->bind_param(
-                "isississssi", 
-                $tiempo, 
-                $efecto, 
-                $fontSize, 
-                $weatherCity, 
-                $weatherApiKey, 
-                $weatherFontSize,
-                $morningStart,
-                $morningEnd,
-                $eveningStart,
-                $eveningEnd,
-                $marco_id
-            );
             
-            if ($stmt->execute()) {
-                json_response(['success' => true]);
-            } else {
-                json_response(['error' => 'Error al actualizar la configuración.'], 500);
-            }
-        }
+
+                        $stmt = $conn->prepare("UPDATE configuracion_marcos SET 
+
+                            tiempo_transicion_seg = ?, 
+
+                            efecto_transicion = ?, 
+
+                            font_size_px = ?,
+
+                            weather_city = ?,
+
+                            weather_api_key = ?,
+
+                            weather_font_size_px = ?,
+
+                            weather_icon_size_px = ?,
+
+                            weather_toggle_interval_sec = ? -- New field in UPDATE query
+
+                            WHERE marco_id = ?");
+
+            
+
+                        if ($stmt === false) {
+
+                            // Si la preparación falla, es muy probable que las columnas no existan en la DB.
+
+                            json_response(['error' => 'Error en la consulta a la base de datos. ¿Has ejecutado el comando ALTER TABLE para añadir las nuevas columnas de pronóstico o weather_icon_size_px?'], 500);
+
+                            exit;
+
+                        }
+
+            
+
+                        $stmt->bind_param(
+
+                            "isissiiii", // Updated bind_param string (fewer 's' for removed forecast fields)
+
+                            $tiempo, 
+
+                            $efecto, 
+
+                            $fontSize, 
+
+                            $weatherCity, 
+
+                            $weatherApiKey, 
+
+                            $weatherFontSize,
+
+                            $weatherIconSize,
+
+                            $weatherToggleInterval, // New variable in bind_param
+
+                            $marco_id
+
+                        );
+
+                        
+
+                        if ($stmt->execute()) {
+
+                            json_response(['success' => true]);
+
+                        } else {
+
+                            json_response(['error' => 'Error al actualizar la configuración.'], 500);
+
+                        }        }
         break;
 
     // --- Endpoint de Fotos ---
@@ -481,6 +507,34 @@ switch ($route) {
             $result = $stmt->get_result();
             $albums = [];
             while ($row = $result->fetch_assoc()) {
+                $album_id_current = $row['id'];
+
+                // Obtener el conteo de medios para el álbum
+                $stmt_count = $conn->prepare("SELECT COUNT(*) AS media_count FROM fotos WHERE album_id = ? AND marco_id = ?");
+                $stmt_count->bind_param("ii", $album_id_current, $marco_id);
+                $stmt_count->execute();
+                $count_result = $stmt_count->get_result()->fetch_assoc();
+                $row['media_count'] = $count_result['media_count'];
+                $stmt_count->close();
+
+                // Obtener hasta 4 URLs de previsualización para el álbum
+                $stmt_previews = $conn->prepare("SELECT url, media_type FROM fotos WHERE album_id = ? AND marco_id = ? ORDER BY created_at DESC LIMIT 4");
+                $stmt_previews->bind_param("ii", $album_id_current, $marco_id);
+                $stmt_previews->execute();
+                $previews_result = $stmt_previews->get_result();
+                $previews = [];
+                // Construir la URL base una sola vez fuera del bucle para eficiencia.
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+                $host = $_SERVER['HTTP_HOST'];
+                $base_url = $protocol . $host . $base_path . '/'; // $base_path ya está calculado arriba
+
+                while ($preview_row = $previews_result->fetch_assoc()) {
+                    $preview_row['url'] = $base_url . $preview_row['url'];
+                    $previews[] = $preview_row;
+                }
+                $row['previews'] = $previews;
+                $stmt_previews->close();
+                
                 $albums[] = $row;
             }
             json_response($albums);
